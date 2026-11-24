@@ -1,0 +1,61 @@
+services:
+  sofia:
+    build: &app-build
+      context: .
+      dockerfile: docker/production.Dockerfile
+    environment: &app-env
+      APP_SECRET: ${APP_SECRET:?Set APP_SECRET in Coolify}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in Coolify}
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+    expose: ["80"]
+    volumes:
+      - sofia-runtime:/app/var
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: ["sh", "-ec", "php bin/console doctrine:migrations:migrate --no-interaction && exec frankenphp run --config /etc/frankenphp/Caddyfile"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 4
+    restart: unless-stopped
+  worker:
+    build: *app-build
+    environment: *app-env
+    volumes:
+      - sofia-runtime:/app/var
+    depends_on:
+      sofia:
+        condition: service_healthy
+    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600"]
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Coolify}
+    volumes:
+      - sofia-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app", "-d", "app"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - sofia-redis:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+volumes:
+  sofia-runtime:
+  sofia-db:
+  sofia-redis:

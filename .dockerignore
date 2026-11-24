@@ -1,0 +1,9 @@
+.git
+api/.env.local
+api/.env.*.local
+api/.env.local.php
+api/config/secrets
+api/var
+api/vendor
+front/node_modules
+front/dist
