@@ -1,5 +1,6 @@
+import { fromRow, toPayload } from './crudValues'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { api, ApiError } from '../api'
 
 type Row = Record<string, any> & { id: number }
@@ -25,7 +26,7 @@ export type Field = {
   readOnlyOnEdit?: boolean
 }
 
-type Props = { title: string; path: string; fields: Field[]; canWrite: boolean; canDelete?: boolean; empty?: string; defaults?: Record<string, unknown> }
+type Props = { renderList?: (rows: Row[], open: (row: Row | 'new') => void) => ReactNode; title: string; path: string; fields: Field[]; canWrite: boolean; canDelete?: boolean; empty?: string; defaults?: Record<string, unknown> }
 
 const inputCls = 'w-full rounded border border-slate-300 px-3 py-2 text-sm'
 
@@ -35,7 +36,7 @@ function useOptions(f: Field): Option[] {
   return f.options ?? []
 }
 
-function FieldInput({ f, value, onChange, disabled }: { f: Field; value: unknown; onChange: (v: unknown) => void; disabled: boolean }) {
+export function FieldInput({ f, value, onChange, disabled }: { f: Field; value: unknown; onChange: (v: unknown) => void; disabled: boolean }) {
   const options = useOptions(f)
   const base = { id: f.name, name: f.name, required: f.required, disabled }
   if (f.type === 'checkbox') return <input {...base} type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} />
@@ -58,35 +59,6 @@ function FieldInput({ f, value, onChange, disabled }: { f: Field; value: unknown
   )
 }
 
-/** Form values <-> API payload. Relations travel as IRIs, empty optional strings as null. */
-function toPayload(fields: Field[], values: Record<string, unknown>, creating: boolean) {
-  const out: Record<string, unknown> = {}
-  for (const f of fields) {
-    if (f.tableOnly) continue
-    if ((f.createOnly && !creating) || (f.readOnlyOnEdit && !creating)) continue
-    const v = values[f.name]
-    if (f.type === 'checkbox') out[f.name] = !!v
-    else if (f.type === 'multi') out[f.name] = ((v as string[]) ?? []).map((id) => `/api/${f.relation!.path}/${id}`)
-    else if (f.relation) out[f.name] = v ? `/api/${f.relation.path}/${v}` : null
-    else if (f.type === 'number') out[f.name] = v === '' || v == null ? null : v
-    else if (f.createOnly && !v) continue
-    else out[f.name] = v === '' || v == null ? null : v
-  }
-  return out
-}
-
-function fromRow(fields: Field[], row: Row | null, defaults: Record<string, unknown>) {
-  const out: Record<string, unknown> = { ...defaults }
-  if (!row) return out
-  for (const f of fields) {
-    const v = row[f.name]
-    if (f.type === 'multi') out[f.name] = ((v as Row[]) ?? []).map((x) => String(x.id))
-    else if (f.relation) out[f.name] = v?.id != null ? String(v.id) : ''
-    else if (!f.createOnly) out[f.name] = v ?? ''
-  }
-  return out
-}
-
 function cell(f: Field, r: Row): string {
   if (f.show) return f.show(r)
   const v = r[f.name]
@@ -96,7 +68,7 @@ function cell(f: Field, r: Row): string {
   return String(v ?? '')
 }
 
-export default function CrudPage({ title, path, fields, canWrite, canDelete = true, empty = 'Aucun élément.', defaults = {} }: Props) {
+export default function CrudPage({ title, path, fields, canWrite, canDelete = true, renderList, empty = 'Aucun élément.', defaults = {} }: Props) {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<Row | 'new' | null>(null)
   const [values, setValues] = useState<Record<string, unknown>>({})
@@ -126,6 +98,7 @@ export default function CrudPage({ title, path, fields, canWrite, canDelete = tr
 
   const submit = (e: FormEvent) => { e.preventDefault(); save.mutate() }
   const creating = editing === 'new'
+  if (renderList && !editing) return <>{list.error && <p role="alert">{list.error.message}</p>}{renderList(list.data ?? [], open)}</>
   const shown = fields.filter((f) => f.type !== 'password' && !f.createOnly)
 
   return (

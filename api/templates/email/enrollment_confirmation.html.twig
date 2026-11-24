@@ -1,5 +1,5 @@
 <p>Bonjour {{ ps.firstName }} {{ ps.lastName|upper }},</p>
-<p>Votre inscription à la classe virtuelle <strong>« {{ class.training.title }} »</strong> est confirmée.</p>
+{% if manual %}<p>Rappel de votre classe virtuelle « {{ class.training.title }} ».</p>{% else %}<p>Votre inscription à la classe virtuelle <strong>« {{ class.training.title }} »</strong> est confirmée.</p>{% endif %}
 <ul>
   <li>Date : {{ class.date|date('d/m/Y') }}</li>
   <li>Organisme : {{ org.name }}</li>

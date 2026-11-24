@@ -8,6 +8,7 @@ framework:
             failed: 'doctrine://default?queue_name=failed'
         routing:
             App\Message\SendEnrollmentConfirmation: async
+            App\Message\ZoomCapacityAlert: async
 
 when@test:
     framework:

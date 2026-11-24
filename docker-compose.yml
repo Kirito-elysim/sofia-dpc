@@ -11,6 +11,24 @@ services:
     volumes: [ "./api:/app" ]
     restart: always
     depends_on: [ database, redis ]
+  reminder-worker:
+    build: { context: docker, dockerfile: php.Dockerfile }
+    command: ["sh", "-c", "while true; do php bin/console app:reminders:send; sleep 15; done"]
+    volumes: [ "./api:/app" ]
+    restart: unless-stopped
+    depends_on: [ database ]
+  zoom-worker:
+    build: { context: docker, dockerfile: php.Dockerfile }
+    command: ["sh", "-c", "while true; do if php bin/console app:zoom:provision && php bin/console app:zoom:registrations; then touch /tmp/zoom-worker-cycle; fi; sleep 10; done"]
+    healthcheck:
+      test: ["CMD", "php", "-r", "$$last = @filemtime('/tmp/zoom-worker-cycle'); exit($$last !== false && time() - $$last < 120 ? 0 : 1);"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    volumes: [ "./api:/app" ]
+    restart: unless-stopped
+    depends_on: [ database, redis ]
   database:
     image: postgres:16
     environment: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: app }

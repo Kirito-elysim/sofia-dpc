@@ -27,6 +27,8 @@ class MyClassesController extends AbstractController
 
         return $this->json(array_map(static fn (ClassSlot $s) => [
             'id' => $s->getId(),
+            'zoomUrl' => 'ready' === $s->zoomState && $s->zoomAccount?->active && ClassStatus::DONE !== $s->virtualClass->status && preg_match('/^[0-9]{9,11}$/D', $s->meetingNumber ?? '')
+                ? 'https://zoom.us/j/'.$s->meetingNumber : null,
             'classId' => $s->virtualClass->getId(),
             'date' => $s->virtualClass->date->format('Y-m-d'),
             'training' => $s->virtualClass->training->title,

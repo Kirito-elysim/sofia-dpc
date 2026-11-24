@@ -79,6 +79,234 @@ class ReferentialsTest extends WebTestCase
         $this->assertContains('UPDATE:Organization', $actions);
     }
 
+    public function testScheduleBlocksOverlapAndKeepsOneClassForTwoSlots(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $training = $this->call('POST', '/api/trainings', ['title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Test', 'lastName' => 'Zoom', 'email' => 'trainer@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $slots = [];
+        foreach ([['Matin', '09:00', '13:00'], ['Après-midi', '14:00', '17:00']] as [$label, $startTime, $endTime]) {
+            $slots[] = ['trainerId' => $trainer, 'timeSlotId' => $this->call('POST', '/api/time-slots', compact('label', 'startTime', 'endTime'))['id']];
+        }
+        $body = ['date' => '2030-06-03', 'trainingId' => $training, 'dpcAction' => '001', 'dpcSession' => '002', 'slots' => $slots];
+        $this->assertSame('NO_ZOOM_ACCOUNT_AVAILABLE', $this->call('POST', '/api/scheduled-classes', $body)['code']);
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom 1', 'profile' => 'DEMO', 'hostUserId' => 'test-host']);
+        $this->assertResponseStatusCodeSame(201);
+        $key = '6ce6e36c-4cb7-471a-a909-305643207f73';
+        $headers = ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json', 'HTTP_IDEMPOTENCY_KEY' => $key];
+        $this->client->request('POST', '/api/scheduled-classes', [], [], $headers, json_encode($body));
+        $this->assertResponseStatusCodeSame(201);
+        $this->client->request('POST', '/api/scheduled-classes', [], [], $headers, json_encode($body));
+        $this->assertResponseStatusCodeSame(200);
+        $this->call('POST', '/api/scheduled-classes', $body);
+        $this->assertResponseStatusCodeSame(409);
+        $this->assertCount(1, $this->call('GET', '/api/virtual-classes'));
+        $this->assertSame(2, (int) $this->em()->getConnection()->fetchOne("SELECT count(*) FROM class_slot WHERE zoom_state='pending'"));
+        $calendar = $this->call('GET', '/api/planning');
+        $this->assertCount(2, $calendar['slots']);
+        $this->assertSame($calendar['slots'][0]['classId'], $calendar['slots'][1]['classId']);
+        $this->assertSame('09:00', $calendar['slots'][0]['startTime']);
+        $this->assertSame('pending', $calendar['slots'][0]['zoomState']);
+        $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom 2', 'profile' => 'SECOND', 'hostUserId' => 'other-host']);
+        $this->assertResponseStatusCodeSame(201);
+        $otherTrainer = $this->call('POST', '/api/trainers', ['firstName' => 'Autre', 'lastName' => 'Test', 'email' => 'second@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        foreach ($body['slots'] as $index => $slot) {
+            $body['slots'][$index]['trainerId'] = $otherTrainer;
+        }
+        $this->call('POST', '/api/scheduled-classes', $body);
+        $this->assertResponseStatusCodeSame(201);
+        $calendar = $this->call('GET', '/api/planning');
+        $this->assertSame(['Zoom 1', 'Zoom 2'], $calendar['accounts']);
+        $this->assertSame(['Zoom 1', 'Zoom 2'], array_column(array_filter($calendar['slots'], static fn ($s) => '09:00' === $s['startTime']), 'zoom'));
+        $this->call('POST', '/api/scheduled-classes', $body);
+        $this->assertResponseStatusCodeSame(409);
+
+    }
+
+    public function testWorkerAssignsPersonalLinksOnlyToLearners(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
+        $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
+        $configPayload=['name'=>'Politique organisme','hosts'=>[$host],'organizations'=>[$org],
+            'policy'=>['waitingRoom'=>false,'passcode'=>false,'joinBeforeHost'=>true,'recording'=>'none']];
+        $this->call('POST','/api/virtual-class-configs',$configPayload);
+        self::assertResponseStatusCodeSame(422);
+        $configPayload['policy']['passcode']=true;
+        $config=$this->call('POST','/api/virtual-class-configs',$configPayload);
+        self::assertResponseIsSuccessful();
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','trainingId' => $training,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $this->call('POST','/api/virtual-class-configs',[...$configPayload,'id'=>$config['id'],'policy'=>['waitingRoom'=>true,
+            'passcode'=>false,'joinBeforeHost'=>false,'recording'=>'account_default']]);
+        self::assertResponseIsSuccessful();
+        foreach (['alice','paul'] as $first) {
+            $this->call('POST',"/api/virtual-classes/$class/enrollments",['firstName'=>$first,'lastName'=>'Test','email'=>$first.'@example.test']);
+            self::assertResponseStatusCodeSame(201);
+        }
+        $this->call('POST',"/api/virtual-classes/$class/enrollments",['firstName'=>'Ana','lastName'=>'Test','email'=>'ana@example.test']);
+        self::assertResponseStatusCodeSame(409);
+        $http=new \Symfony\Component\HttpClient\MockHttpClient(static function(string $method,string $url,array $options) {
+            if (str_ends_with($url,'/oauth/token')) { $response=['access_token'=>'local-token']; }
+            elseif (str_ends_with($url,'/meetings')) {
+                self::assertTrue(json_decode($options['body'],true)['settings']['registrants_confirmation_email']);
+                $body=json_decode($options['body'],true);
+                self::assertMatchesRegularExpression('/^\d{6}$/',$body['password']);
+                self::assertFalse($body['settings']['waiting_room']);
+                self::assertTrue($body['settings']['join_before_host']);
+                self::assertSame('none',$body['settings']['auto_recording']);
+                self::assertSame(0,$body['settings']['approval_type']);
+                $response=['id'=>'12345678901','password'=>'','settings'=>['waiting_room'=>true,'join_before_host'=>false,'auto_recording'=>'none','approval_type'=>0]];
+            } else {
+                self::assertSame('POST',$method);
+                self::assertStringEndsWith('/meetings/12345678901/registrants',$url);
+                $email=json_decode($options['body'],true)['email'];
+                self::assertContains($email,['alice@example.test','paul@example.test']);
+                $key=hash('sha256',$email);
+                $response=['registrant_id'=>$key,'join_url'=>'https://example.test/j/'.$key];
+            }
+            return new \Symfony\Component\HttpClient\Response\MockResponse(json_encode($response,JSON_THROW_ON_ERROR));
+        });
+        $gateway=new \App\Zoom\ZoomGateway($http,['DEMO'=>['account_id'=>'test','client_id'=>'test','client_secret'=>'test']],new \Symfony\Component\Cache\Adapter\ArrayAdapter());
+        $provision=new \Symfony\Component\Console\Tester\CommandTester(new \App\Command\ProvisionZoomCommand($this->em(),$gateway));
+        self::assertSame(0,$provision->execute([]));
+        $sync=new \Symfony\Component\Console\Tester\CommandTester(new \App\Command\ZoomRegistrationsCommand($this->em(),$gateway));
+        self::assertSame(0,$sync->execute([]));
+        self::assertSame(0,$sync->execute([]));
+        self::assertSame(4,$http->getRequestsCount());
+        $list=$this->call('GET',"/api/virtual-classes/$class/enrollments");
+        self::assertStringContainsString('Ana',$list['teachingSlots'][0]['trainer']);
+        self::assertFalse($list['teachingSlots'][0]['policy']['requested']['waitingRoom']);
+        self::assertTrue($list['teachingSlots'][0]['policy']['effective']['waitingRoom']);
+        self::assertCount(2,$list['zoomRegistrations']);
+        $links=array_column($list['zoomRegistrations'],'url','enrollment');
+        foreach ($list['enrollments'] as $row) {
+            self::assertSame('https://example.test/j/'.hash('sha256',$row['participant']['email']),$links[$row['id']]);
+        }
+        self::assertCount(2,array_unique($links));
+    }
+
+    public function testZoomPresenceSignatureRoleAndDuplicateDelivery(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
+        $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','trainingId' => $training,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $this->em()->getConnection()->executeStatement("UPDATE class_slot SET meeting_number='12345678901' WHERE virtual_class_id=?", [$class]);
+        $this->call('POST', "/api/virtual-classes/$class/enrollments", ['firstName' => 'Paul','lastName' => 'Test','email' => 'ps@example.test']);
+        $ts = (string) time();
+        $registration = function(string $event,int $stamp) use ($host,$ts): void {
+            $body=json_encode(['event'=>$event,'event_ts'=>$stamp,'payload'=>['account_id'=>'demo-account',
+                'object'=>['id'=>'12345678901','registrant'=>['id'=>'personal-id','email'=>'ps@example.test',
+                'status'=>'approved','join_url'=>'https://example.test/j/private']]]],JSON_THROW_ON_ERROR);
+            $this->client->request('POST',"/webhooks/zoom/$host",[],[],['CONTENT_TYPE'=>'application/json',
+                'HTTP_X_ZM_REQUEST_TIMESTAMP'=>$ts,'HTTP_X_ZM_SIGNATURE'=>'v0='.hash_hmac('sha256',"v0:$ts:$body",'fixture-signing-key')],$body);
+            $this->assertResponseStatusCodeSame(204);
+        };
+        $registration('meeting.registration_created',1000);
+        $registration('meeting.registration_created',1000);
+        $regs=$this->call('GET',"/api/virtual-classes/$class/enrollments")['zoomRegistrations'];
+        self::assertCount(1,$regs);
+        self::assertSame('approved',$regs[0]['state']);
+        self::assertSame('https://example.test/j/private',$regs[0]['url']);
+        foreach (['ana@example.test','ps@example.test',''] as $n => $email) {
+            $body = json_encode(['event' => 'meeting.participant_joined','payload' => ['account_id' => 'demo-account','object' => ['id' => '12345678901','uuid' => 'instance','participant' => ['user_id' => (string) ($n+1),'email' => $n===1?'':$email,'registrant_id'=>$n===1?'personal-id':'','join_time' => '2030-06-03T07:02:00Z']]]], JSON_THROW_ON_ERROR);
+            $headers = ['CONTENT_TYPE' => 'application/json','HTTP_X_ZM_REQUEST_TIMESTAMP' => $ts,'HTTP_X_ZM_SIGNATURE' => 'invalid'];
+            $this->client->request('POST', "/webhooks/zoom/$host", [], [], $headers, $body);
+            $this->assertResponseStatusCodeSame(401);
+            $headers['HTTP_X_ZM_SIGNATURE'] = 'v0='.hash_hmac('sha256', "v0:$ts:$body", 'fixture-signing-key');
+            for ($i=0; $i<2; ++$i) {
+                $this->client->request('POST', "/webhooks/zoom/$host", [], [], $headers, $body);
+                $this->assertResponseStatusCodeSame(204);
+            }
+        }
+        $events = $this->call('GET', '/api/live-presence');
+        $this->assertSame(['UNKNOWN','LEARNER','TRAINER'], array_column($events, 'role'));
+        $registration('meeting.registration_cancelled',3000);
+        $registration('meeting.registration_approved',2000);
+        $reg=$this->call('GET',"/api/virtual-classes/$class/enrollments")['zoomRegistrations'][0];
+        self::assertSame('cancelled',$reg['state']);
+        self::assertNull($reg['url']);
+        $db = $this->em()->getConnection();
+        $db->executeStatement("UPDATE class_slot SET starts_at=(now() AT TIME ZONE 'Europe/Paris')-interval '1 hour',
+            ends_at=(now() AT TIME ZONE 'Europe/Paris')+interval '1 hour' WHERE virtual_class_id=?", [$class]);
+        $db->executeStatement("UPDATE attendance_event SET at=now()-interval '30 minutes' WHERE person_role='LEARNER'");
+        // Two overlapping devices, with unidentified leave events received in reverse order.
+        $db->executeStatement("INSERT INTO attendance_event(event_key,slot_id,connection_key,at,event,person_role,enrollment_id)
+            SELECT fixture.key,a.slot_id,fixture.device,now()-fixture.age,fixture.kind,
+                   CASE WHEN fixture.kind='JOIN' THEN 'LEARNER' ELSE 'UNKNOWN' END,
+                   CASE WHEN fixture.kind='JOIN' THEN a.enrollment_id END
+            FROM attendance_event a CROSS JOIN LATERAL (VALUES
+                ('second-leave','second',interval '12 minutes','LEAVE'),
+                ('first-leave',a.connection_key,interval '15 minutes','LEAVE'),
+                ('second-join','second',interval '20 minutes','JOIN')
+            ) fixture(key,device,age,kind) WHERE a.person_role='LEARNER'");
+        $summary = $this->call('GET', '/api/live-presence/learners');
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(1, $summary);
+        $this->assertSame('Paul Test', $summary[0]['name']);
+        $this->assertSame('DISCONNECTED', $summary[0]['status']);
+        $this->assertEqualsWithDelta(1080, $summary[0]['seconds'], 2);
+        $this->assertGreaterThanOrEqual(720, $summary[0]['awaySeconds']);
+        // Move the slot five minutes into the future and exercise the real scheduling query.
+        $db->executeStatement("UPDATE class_slot SET starts_at=(now() AT TIME ZONE 'Europe/Paris')+interval '4 minutes 58 seconds'
+            WHERE virtual_class_id=?", [$class]);
+        $cards=$this->call('GET','/api/live-presence/classes');
+        $this->assertResponseIsSuccessful();
+        self::assertCount(1,$cards);
+        self::assertSame('Atelier',$cards[0]['title']);
+        self::assertFalse($cards[0]['trainerConnected']);
+        self::assertSame('left',$cards[0]['participants'][0]['state']);
+        self::assertSame('Paul Test',$cards[0]['participants'][0]['name']);
+        $this->call('POST','/api/live-presence/classes/'.$cards[0]['id'].'/contact',['target'=>'0','channel'=>'MAIL','body'=>'Test']);
+        $this->assertResponseStatusCodeSame(404);
+        foreach (['CONNECTED','NOT_CONNECTED'] as $rule) {
+            $this->call('POST','/api/message-templates', ['name'=>'Test rappel','channel'=>'E-mail','organization'=>'Tous',
+                'triggerLabel'=>'5 min avant','body'=>'Bonjour {prenom}','minutesBefore'=>5,'presenceRule'=>$rule]);
+            $this->assertResponseStatusCodeSame(201);
+        }
+        $mailer = $this->createMock(\Symfony\Component\Mailer\MailerInterface::class);
+        $mailer->expects(self::once())->method('send')->with(self::callback(
+            static fn ($email) => 'Bonjour Paul' === $email->getTextBody()
+        ));
+        $command = new \Symfony\Component\Console\Tester\CommandTester(new \App\Command\SendScheduledReminders(
+            $db,$mailer,$this->createStub(\Symfony\Component\Notifier\TexterInterface::class)
+        ));
+        $command->execute([]);
+        $command->execute([]);
+        self::assertSame('SENT',$db->fetchOne("SELECT status FROM message_log WHERE kind='SCHEDULED_REMINDER'"));
+        $db->executeStatement("UPDATE message_template SET active=false WHERE name='Test rappel'");
+
+
+    }
+
+    public function testMessageTemplateEditingAndPermissions(): void
+    {
+        $this->loginAs('ADMIN');
+        $fields = ['name'=>'Relance test','channel'=>'SMS','organization'=>'Tous','triggerLabel'=>'J-3','body'=>'Bonjour {prenom}'];
+        $row = $this->call('POST', '/api/message-templates', $fields);
+        $this->assertResponseStatusCodeSame(201);
+        $url = '/api/message-templates/'.$row['id'];
+        $this->call('PATCH', $url, ['body'=>str_repeat('a', 160)]);
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertFalse($this->call('PATCH', $url, ['active'=>false])['active']);
+        $this->loginAs('LECTURE');
+        $this->call('GET', '/api/message-templates');
+        $this->assertResponseIsSuccessful();
+        $this->call('PATCH', $url, ['active'=>true]);
+        $this->assertResponseStatusCodeSame(403);
+    }
+
     public function testTrainingTrainerTimeSlot(): void
     {
         $this->loginAs('ADMIN');
@@ -134,6 +362,8 @@ class ReferentialsTest extends WebTestCase
         $this->em()->flush();
         $this->client->jsonRequest('POST', '/api/auth/login', ['username' => 'n@example.test', 'password' => 'un-mot-de-passe-long']);
         $this->assertSame(200, $this->client->getResponse()->getStatusCode());
+        $actions = $this->em()->getConnection()->fetchFirstColumn("SELECT action FROM audit_log WHERE user_email='n@example.test'");
+        $this->assertContains('LOGIN_FAILURE', $actions);
     }
 
     public function testTrainerAccountSeesOnlyOwnUpcomingClasses(): void

@@ -17,3 +17,15 @@ framework:
         # Namespaced pools use the above "app" backend by default
         #pools:
             #my.dedicated.cache: null
+
+        pools:
+            cache.zoom_tokens:
+                adapter: cache.adapter.redis
+                provider: '%env(ZOOM_REDIS_DSN)%'
+
+when@test:
+    framework:
+        cache:
+            pools:
+                cache.zoom_tokens:
+                    adapter: cache.adapter.array

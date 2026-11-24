@@ -26,6 +26,21 @@ class VirtualClass
     #[ORM\OneToMany(targetEntity: Enrollment::class, mappedBy: 'virtualClass', fetch: 'EXTRA_LAZY')]
     private Collection $enrollments;
 
+    #[ORM\Column(length: 80, nullable: true), Groups('read')]
+    public ?string $dpcAction = null;
+
+    #[ORM\Column(length: 80, nullable: true), Groups('read')]
+    public ?string $dpcSession = null;
+
+    #[ORM\Column(length: 100, nullable: true), Groups('read')]
+    public ?string $reference = null;
+
+    #[ORM\Column(length: 36, nullable: true, unique: true)]
+    public ?string $scheduleKey = null;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    public ?string $scheduleFingerprint = null;
+
     public function __construct(
         #[ORM\ManyToOne, Groups('read')] public Training $training,
         #[ORM\Column(type: 'date_immutable'), Groups('read')] public \DateTimeImmutable $date,

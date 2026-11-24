@@ -47,6 +47,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne, Groups(['user:read', 'user:write'])]
     public ?Trainer $trainer = null;
 
+    #[ORM\ManyToOne, Groups(['user:read', 'user:write'])]
+    public ?Organization $organization = null;
+
+    #[ORM\Column(nullable: true), Groups('user:read')]
+    public ?\DateTimeImmutable $lastLoginAt = null;
+
     /** @param list<string> $roles one of self::ROLES */
     public function __construct(
         #[ORM\Column(length: 180, unique: true), Groups(['user:read', 'user:write']), Assert\NotBlank, Assert\Email] public string $email,

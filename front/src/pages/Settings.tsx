@@ -1,20 +1,15 @@
+import ZoomConnector from './ZoomConnector'
 import CrudPage, { type Field } from '../components/CrudPage'
+
+import UserDirectory from './UserDirectory'
+import Catalog from './Catalog'
 
 const orgLabel = (o: Record<string, string>) => o.name
 const trainingLabel = (t: Record<string, string>) => t.title
 
-const organizations: Field[] = [
-  { name: 'name', label: 'Raison sociale', required: true },
-  { name: 'code', label: 'Code', required: true, pattern: '[A-Z0-9_]{2,20}', hint: 'Majuscules, ex. SOFIA, PHOCEA', readOnlyOnEdit: true },
-  { name: 'emailFrom', label: "Adresse d'envoi des mails", type: 'email', required: true, hint: "Avec Gmail : l'adresse authentifiée ou un alias" },
-  { name: 'smsSender', label: 'Expéditeur SMS', pattern: '[A-Za-z0-9]{1,11}', hint: '11 caractères max' },
-  { name: 'siret', label: 'SIRET', pattern: '[0-9]{14}', hint: '14 chiffres' },
-  { name: 'andpcNumber', label: 'N° ANDPC' },
-  { name: 'active', label: 'Actif', type: 'checkbox' },
-]
-
 const trainings: Field[] = [
   { name: 'organization', label: 'Organisme', type: 'select', required: true, relation: { path: 'organizations', label: orgLabel } },
+  { name: 'theme', label: 'Thématique' },
   { name: 'title', label: 'Titre', required: true },
   { name: 'reference', label: 'Référence' },
   { name: 'totalDurationMin', label: 'Durée totale (min)', type: 'number' },
@@ -29,6 +24,10 @@ const timeSlots: Field[] = [
 ]
 
 const trainers: Field[] = [
+  { name: 'civility', label: 'Civilité', type: 'select', options: ['Dr','Pr','Mme','M.'].map(value=>({value,label:value})) },
+  { name: 'organization', label: 'Organisme', type: 'select', relation: {path:'organizations',label:orgLabel} },
+  { name: 'specialty', label: 'Spécialité' },
+  { name: 'comments', label: 'Commentaires (optionnel)' },
   { name: 'lastName', label: 'Nom', required: true },
   { name: 'firstName', label: 'Prénom', required: true },
   { name: 'email', label: 'E-mail', type: 'email', required: true },
@@ -39,12 +38,13 @@ const trainers: Field[] = [
 const ROLES = [
   { value: 'ROLE_SUPER_ADMIN', label: 'Super admin' },
   { value: 'ROLE_ADMIN', label: 'Admin' },
-  { value: 'ROLE_SUIVI', label: 'Suivi' },
+  { value: 'ROLE_SUIVI', label: 'Suivi / Attestations' },
   { value: 'ROLE_LECTURE', label: 'Lecture' },
-  { value: 'ROLE_FORMATEUR', label: 'Formateur (voit ses classes)' },
+  { value: 'ROLE_FORMATEUR', label: 'Formateur' },
 ]
 
 const users: Field[] = [
+  { name:'organization', label:'Organisme', type:'select', relation:{path:'organizations',label:orgLabel} },
   { name: 'name', label: 'Nom', required: true },
   { name: 'email', label: 'E-mail', type: 'email', required: true },
   { name: 'role', label: 'Rôle', type: 'select', required: true, options: ROLES },
@@ -53,9 +53,16 @@ const users: Field[] = [
   { name: 'active', label: 'Actif', type: 'checkbox' },
 ]
 
-export const Organizations = ({ canWrite }: { canWrite: boolean }) => <CrudPage title="Organismes" path="organizations" fields={organizations} canWrite={canWrite} defaults={{ active: true }} />
-export const Trainings = ({ canWrite }: { canWrite: boolean }) => <CrudPage title="Formations" path="trainings" fields={trainings} canWrite={canWrite} defaults={{ defaultCapacity: 20 }} />
+export const Trainings = ({ canWrite }: { canWrite: boolean }) => <Catalog title="Formations" path="trainings" fields={trainings} canWrite={canWrite} defaults={{ defaultCapacity: 20 }} />
 export const TimeSlots = ({ canWrite }: { canWrite: boolean }) => <CrudPage title="Créneaux" path="time-slots" fields={timeSlots} canWrite={canWrite} />
-export const Trainers = ({ canWrite }: { canWrite: boolean }) => <CrudPage title="Formateurs" path="trainers" fields={trainers} canWrite={canWrite} />
+export const Trainers = ({ canWrite }: { canWrite: boolean }) => <Catalog title="Formateurs" path="trainers" fields={trainers} canWrite={canWrite} />
 // Users are deactivated, never deleted (audit trail).
-export const Users = () => <CrudPage title="Utilisateurs et rôles" path="users" fields={users} canWrite canDelete={false} defaults={{ active: true, role: 'ROLE_LECTURE' }} />
+export const Users = () => <CrudPage title="Utilisateurs et rôles" path="users" renderList={(rows,open)=><UserDirectory rows={rows} open={open} roles={ROLES}/>} fields={users} canWrite canDelete={false} defaults={{ active: true, role: 'ROLE_LECTURE' }} />
+
+const zoomFields: Field[] = [
+  {name:'label',label:'Nom du compte',required:true},
+  {name:'hostUserId',label:'Identifiant Zoom de l’hôte',required:true},
+  {name:'profile',label:'Profil OAuth serveur',hint:'Nom du profil configuré pour ce compte, par exemple ZOOM_2.',required:true,pattern:'[A-Z0-9_]{1,50}'},
+  {name:'active',label:'Disponible pour les réservations',type:'checkbox'},
+]
+export const ZoomAccounts = () => <><ZoomConnector/><CrudPage title="Comptes Zoom" empty="Ajoutez un premier compte hôte Zoom pour réserver des créneaux." path="zoom-accounts" fields={zoomFields} canWrite canDelete={false} defaults={{active:true}}/></>

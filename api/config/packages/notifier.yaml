@@ -1,0 +1,5 @@
+framework:
+    notifier:
+        message_bus: false
+        texter_transports:
+            ovhcloud: '%env(OVHCLOUD_DSN)%'

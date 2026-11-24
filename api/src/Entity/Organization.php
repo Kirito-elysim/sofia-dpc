@@ -32,8 +32,8 @@ class Organization
     private ?int $id = null;
 
     public function __construct(
-        #[ORM\Column(length: 100), Groups(['read', 'write']), Assert\NotBlank, Assert\Length(max: 100)] public string $name,
-        #[ORM\Column(length: 20, unique: true), Groups(['read', 'write']), Assert\NotBlank, Assert\Regex('/^[A-Z0-9_]{2,20}$/', message: 'Majuscules, chiffres et _ uniquement.')] public string $code,
+        #[ORM\Column(length: 100), Groups(['read', 'write', 'user:read']), Assert\NotBlank, Assert\Length(max: 100)] public string $name,
+        #[ORM\Column(length: 20, unique: true), Groups(['read', 'write', 'user:read']), Assert\NotBlank, Assert\Regex('/^[A-Z0-9_]{2,20}$/', message: 'Majuscules, chiffres et _ uniquement.')] public string $code,
         // Gmail only accepts the authenticated account (or a configured alias) as sender.
         #[ORM\Column(length: 180), Groups(['read', 'write']), Assert\NotBlank, Assert\Email] public string $emailFrom,
         // Max 11 alphanumeric chars (OVH sender rule).
@@ -41,10 +41,11 @@ class Organization
         #[ORM\Column(length: 14, nullable: true), Groups(['read', 'write']), Assert\Regex('/^[0-9]{14}$/', message: 'Le SIRET contient 14 chiffres.')] public ?string $siret = null,
         #[ORM\Column(length: 30, nullable: true), Groups(['read', 'write']), Assert\Length(max: 30)] public ?string $andpcNumber = null,
         #[ORM\Column, Groups(['read', 'write'])] public bool $active = true,
+        #[ORM\Column(length: 12, nullable: true), Groups(['read', 'write']), Assert\Choice(choices: ['blue', 'purple', 'gray'])] public ?string $color = null,
     ) {
     }
 
-    #[Groups('read')]
+    #[Groups(['read', 'user:read'])]
     public function getId(): ?int
     {
         return $this->id;

@@ -1,0 +1,14 @@
+.user-directory .oa-title{padding-left:0}.user-directory .oa-title>img{width:3.95vw}.user-directory .user-filters{display:grid;grid-template-columns:1.45fr 1.1fr .95fr 1fr auto auto;align-items:end;gap:1vw;margin:.55vw 0 1.65vw}.user-filters label{position:relative;font-size:.92em;font-weight:600;min-width:0}.user-filters label img{position:absolute;width:1.45em;left:.8em;bottom:.65em}.user-filters :is(input,select){display:block;width:100%;padding:.67em .55em .67em 2.8em;border:1px solid #c9d6e9;border-radius:.55em;background:#fff9;font-size:1.02em;font-weight:normal}.user-filters button{height:2.75vw;padding:.6em 1em;border:1px solid #93b6ff;color:#004aff}.user-filters button.blue{color:white}.user-filters button img,.user-directory .oa-empty button img{width:1.45em}.user-directory .oa-actions img,.user-directory .oa-state img,.role-pill img{width:1.35em;mix-blend-mode:multiply}.user-directory th img{width:1em}.user-directory .oa-table th,.user-directory .oa-table td{padding:.28vw .35vw;height:2.6vw}.user-directory .oa-table table{font-size:.88em}.user-directory .oa-actions{gap:.28em}.user-directory .oa-actions button{padding:.42em .53em;gap:.3em}.role-pill{background:#eaf0fc;border-radius:.65em;padding:.35em .6em;display:inline-flex;align-items:center;gap:.5em}.role-pill.ROLE_SUPER_ADMIN{background:#f1e6fd}.user-directory .oa-empty{margin-top:1.45vw;min-height:11.3vw;padding:.65vw}.user-directory .oa-empty>img{width:10vw;border-radius:48%}.user-directory .oa-empty button img{border-radius:0}.user-directory .oa-table footer{height:3.8vw}.user-directory .org{font-size:.9em}.user-directory td:nth-child(3){max-width:14vw;overflow:hidden;text-overflow:ellipsis}@media(max-width:1050px){.user-directory .user-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.user-filters button,.user-directory .oa-table footer{height:auto}.user-directory .oa-title>img{min-width:42px}}@media(max-width:650px){.user-directory .user-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1200px){
+  .user-directory .user-filters{margin-top:.98vw}
+  .user-directory .oa-title{gap:.7vw}
+  .user-directory .oa-table table{table-layout:fixed}
+  .user-directory th:nth-child(1){width:3.6%}
+  .user-directory th:nth-child(2){width:11.6%}
+  .user-directory th:nth-child(3){width:16.8%}
+  .user-directory th:nth-child(4){width:13%}
+  .user-directory th:nth-child(5){width:11.2%}
+  .user-directory th:nth-child(6){width:13.6%}
+  .user-directory th:nth-child(7){width:7.6%}
+  .user-directory .oa-empty{padding-right:6vw}
+}

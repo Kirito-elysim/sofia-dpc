@@ -45,6 +45,11 @@ class Trainer
         #[ORM\Column(length: 100), Groups(['read', 'write', 'user:read']), Assert\NotBlank] public string $lastName,
         #[ORM\Column(length: 180, unique: true), Groups(['read', 'write']), Assert\NotBlank, Assert\Email] public string $email,
         #[ORM\Column(length: 20, nullable: true), Groups(['read', 'write']), Assert\Regex('/^\+?[0-9 .]*$/')] public ?string $phone = null,
+        #[ORM\Column(options: ['default' => true]), Groups(['read', 'write'])] public bool $active = true,
+        #[ORM\Column(length: 12, nullable: true), Groups(['read', 'write']), Assert\Length(max: 12)] public ?string $civility = null,
+        #[ORM\Column(length: 100, nullable: true), Groups(['read', 'write']), Assert\Length(max: 100)] public ?string $specialty = null,
+        #[ORM\Column(length: 500, nullable: true), Groups(['read', 'write']), Assert\Length(max: 500)] public ?string $comments = null,
+        #[ORM\ManyToOne, Groups(['read', 'write'])] public ?Organization $organization = null,
     ) {
         $this->trainings = new ArrayCollection();
     }

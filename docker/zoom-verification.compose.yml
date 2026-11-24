@@ -1,0 +1,27 @@
+services:
+  zoom-worker:
+    environment:
+      DATABASE_URL: postgresql://app:app@zoom-verification-db:5432/app?serverVersion=16
+      ZOOM_PROFILES: '{}'
+    networks: [zoom-verification]
+    depends_on: !override
+      zoom-verification-db:
+        condition: service_healthy
+
+  zoom-verification-db:
+    image: postgres:16
+    environment: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: app }
+    volumes: [zoom-verification-data:/var/lib/postgresql/data]
+    networks: [zoom-verification]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app", "-d", "app"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+networks:
+  zoom-verification:
+    internal: true
+
+volumes:
+  zoom-verification-data:

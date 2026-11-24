@@ -11,7 +11,7 @@ Légende : [x] fait · [~] partiel · [ ] à faire. Dernière mise à jour : 202
 - [x] Auth par session (login/logout/me), rôles hiérarchisés, limitation des tentatives
 - [ ] 2FA TOTP (scheb/2fa-bundle) obligatoire pour ADMIN / SUPER_ADMIN
 - [x] Gestion des utilisateurs dans l'UI (SUPER_ADMIN) ; commande `app:user:create` pour le premier compte
-- [ ] Mercure (temps réel), CI (GitHub Actions/GitLab), `compose.prod.yaml`, sauvegardes restic, `/health`
+- [ ] Mercure (temps réel), CI (GitHub Actions/GitLab), `compose.prod.yaml`, sauvegardes restic (point `/health` livré)
 - [ ] php-cs-fixer configuré (paquet installé, pas de règle ni de passage CI)
 
 ### Système d'inscription (premier chantier, commencé)
@@ -22,7 +22,7 @@ Légende : [x] fait · [~] partiel · [ ] à faire. Dernière mise à jour : 202
 - [x] Tests : 3 fonctionnels PHPUnit (capacité, doublon, annulation, rôles, validation), 2 Vitest
 - [ ] **Vérifier l'envoi réel via Gmail** (mot de passe d'application) — non testé
 - [ ] Import CSV des inscrits (`POST /api/virtual-classes/{id}/enrollments/import`)
-- [ ] Fiche PS : historique `MessageLog`, relance manuelle (`POST /api/enrollments/{id}/relance`)
+- [x] Fiche PS : historique `MessageLog`, relance manuelle (`POST /api/enrollments/{id}/relance`)
 - [ ] Normalisation E.164 du téléphone, contrôle RPPS plus fin
 - [ ] Gabarits de mail éditables par organisme (`MessageTemplate`, Twig sandbox) — aujourd'hui en dur dans `templates/email/`
 - [ ] Auto-inscription publique par le PS (non demandée : à valider avec le client avant de coder)
@@ -30,20 +30,20 @@ Légende : [x] fait · [~] partiel · [ ] à faire. Dernière mise à jour : 202
 ### Référentiels et classes
 - [x] CRUD Organisation (SIRET, n° ANDPC, expéditeurs mail/SMS, actif), Formation (capacité par défaut), Créneau, Formateur (formations assurées), Utilisateur + rôle — API + écrans, tests PHPUnit
 - [ ] Logo d'organisme (upload) ; lien formateur ↔ créneau de classe
-- [ ] CRUD Compte Zoom (SUPER_ADMIN, secrets chiffrés libsodium, bouton « tester la connexion »), Modèles de messages (aperçu)
-- [ ] Écran « Journal d'audit » (la table est alimentée automatiquement, pas encore d'UI ni d'endpoint)
+- [~] CRUD Compte Zoom (SUPER_ADMIN, secrets chiffrés libsodium, bouton « tester la connexion »), Modèles de messages (aperçu)
+- [x] Écran et API de consultation du journal d’audit (ADMIN)
 - [ ] Mot de passe oublié / changement de son propre mot de passe ; liste des utilisateurs filtrable
-- [ ] Création de classe (formulaire) : `ClassSlot` (créneaux + formateur par créneau), capacité par défaut de la formation
-- [ ] Allocation automatique d'un compte Zoom libre + contrainte d'exclusion PostgreSQL (btree_gist) ; 409 + mail admin si aucun
+- [x] Création de classe (formulaire) : `ClassSlot` (créneaux + formateur par créneau), capacité par défaut de la formation
+- [~] Allocation automatique d'un compte Zoom libre + contrainte d'exclusion PostgreSQL (btree_gist) ; 409 + mail admin si aucun
 - [ ] Déplacement / suppression d'une classe (recréation / suppression Zoom, renvoi des liens)
-- [ ] Planning calendrier FullCalendar (jour/semaine/mois), filtres, KPI (maquette `docs/maquettes/planning.png`)
+- [~] Planning calendrier React connecté à l’API ; objectif initial FullCalendar (jour/semaine/mois), filtres, KPI (maquette `docs/maquettes/planning.png`)
 
 ### Zoom, présence, relances
-- [ ] Client Zoom Server-to-Server OAuth (jeton en cache Redis), création de réunions, inscription des PS (`join_url` → `Enrollment.joinUrl`)
-- [ ] Webhooks Zoom (signature, `endpoint.url_validation`), `AttendanceEvent`, calcul de présence (fonction pure testée)
+- [~] Client Zoom Server-to-Server OAuth (jeton en cache Redis), création de réunions, inscription des PS (`join_url` → `Enrollment.joinUrl`)
+- [~] Webhooks Zoom (signature, `endpoint.url_validation`), `AttendanceEvent`, calcul de présence (fonction pure testée)
 - [ ] Relances : mail J-3/J-1/jour J, T-5 min, +3/+8 min après déconnexion, alerte +10 min (visuelle + sonore) ; pas de SMS 20h–8h
 - [ ] SMS OVHcloud (expéditeur par organisme), liens courts `/l/{code}`
-- [~] Journal d'audit : listener Doctrine générique fait ; manquent connexions/échecs de connexion, relances, écran et endpoint de consultation (ADMIN)
+- [x] Journal d’audit : listener Doctrine, connexions/échecs, demandes de relance et consultation ADMIN
 
 ## Phase 2 — NE PAS DÉVELOPPER
 Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : uniquement visibles « Bientôt » dans le menu.
@@ -60,3 +60,7 @@ Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : 
 
 - [x] Compte formateur (ROLE_FORMATEUR) + « Mes classes » (2026-11-24)
 - [ ] Rôles staff par organisme (ex. ADMIN sur SOFIA, LECTURE sur PHOCEA) : non fait, à confirmer avec le client
+
+- 2026-11-24 (3) : Ouverture externe chez Zoom, plusieurs comptes hôtes, OAuth par profil et cache Redis, réservation transactionnelle multi-créneaux, worker de provisionnement, alerte de saturation et planning connecté. Voir le bilan détaillé dans HANDOFF.md pour les contrôles et les limites de recette.
+
+- Suivi en direct : cumul de présence par apprenant sur les créneaux en cours, fusion multi-appareils et signalement visuel après dix minutes de déconnexion. Test fonctionnel PostgreSQL avec webhooks simulés. Recette Zoom réelle en attente.

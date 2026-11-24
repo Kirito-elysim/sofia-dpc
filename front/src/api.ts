@@ -41,5 +41,5 @@ export type VirtualClass = {
 export type Enrollment = {
   id: number
   status: 'ACTIVE' | 'CANCELLED'
-  participant: { firstName: string; lastName: string; email: string; phone: string | null; rpps: string | null }
+  participant: { id:number; firstName: string; lastName: string; email: string; phone: string | null; rpps: string | null }
 }

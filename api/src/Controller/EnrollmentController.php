@@ -30,7 +30,22 @@ class EnrollmentController extends AbstractController
         $items = $this->em->getRepository(Enrollment::class)->findBy(['virtualClass' => $class], ['createdAt' => 'ASC']);
 
         return $this->json([
+            'zoomRegistrations' => $this->em->getConnection()->fetchAllAssociative("SELECT e.id AS enrollment,s.id AS slot,ts.label,
+                coalesce(z.state,'queued') AS state, CASE WHEN z.state='approved' THEN z.join_url END AS url
+                FROM enrollment e JOIN class_slot s ON s.virtual_class_id=e.virtual_class_id JOIN time_slot ts ON ts.id=s.time_slot_id
+                LEFT JOIN zoom_registration z ON z.slot_id=s.id AND z.enrollment_id=e.id
+                WHERE e.virtual_class_id=? AND e.status='ACTIVE' ORDER BY ts.start_time,s.id",[$class->getId()]),
             'capacity' => $class->capacity,
+            'teachingSlots' => array_map(static function (array $slot): array {
+                $slot['policy'] = $slot['policy'] === null ? null : json_decode($slot['policy'],true,512,JSON_THROW_ON_ERROR);
+                return $slot;
+            }, $this->em->getConnection()->fetchAllAssociative(
+                "SELECT s.id, s.zoom_policy AS policy, s.zoom_state AS state, ts.label, ts.start_time AS start, ts.end_time AS end_time,
+                        NULLIF(concat_ws(' ', t.civility, t.first_name, t.last_name), '') AS trainer
+                 FROM class_slot s JOIN time_slot ts ON ts.id = s.time_slot_id
+                 LEFT JOIN trainer t ON t.id = s.trainer_id
+                 WHERE s.virtual_class_id = ? ORDER BY ts.start_time, s.id", [$class->getId()]
+            )),
             'enrollments' => array_map(fn (Enrollment $e) => $this->serialize($e), $items),
         ]);
     }

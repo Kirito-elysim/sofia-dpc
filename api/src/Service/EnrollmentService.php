@@ -35,6 +35,15 @@ class EnrollmentService
             }
 
             $email = mb_strtolower(trim($input->email));
+            $teachesHere = $conn->fetchOne(
+                'SELECT 1 FROM class_slot s JOIN trainer t ON t.id = s.trainer_id
+                 LEFT JOIN "user" u ON u.trainer_id = t.id
+                 WHERE s.virtual_class_id = ? AND (LOWER(TRIM(t.email)) = ? OR LOWER(TRIM(u.email)) = ?) LIMIT 1',
+                [$class->getId(), $email, $email],
+            );
+            if (false !== $teachesHere) {
+                throw new EnrollmentException('TRAINER_ASSIGNED_TO_CLASS', 'Cette personne anime un créneau de cette classe et ne peut pas y être inscrite comme apprenant.', 409);
+            }
             $ps = $this->em->getRepository(Participant::class)->findOneBy(['email' => $email]);
             if (null === $ps) {
                 $input->email = $email;
@@ -54,6 +63,10 @@ class EnrollmentService
                 throw new EnrollmentException('CAPACITY_REACHED', 'La capacité maximale de la classe est atteinte.', 409);
             }
 
+            if ($existing) {
+                $conn->executeStatement("UPDATE zoom_registration SET state='queued',registrant_id=NULL,join_url=NULL
+                    WHERE enrollment_id=? AND state IN ('revoked','cancelled','denied')",[$existing->getId()]);
+            }
             $enrollment = $existing ?? new Enrollment($class, $ps);
             $enrollment->status = EnrollmentStatus::ACTIVE; // re-enrolling a cancelled PS reuses the row
             $this->em->persist($enrollment);

@@ -2,9 +2,12 @@
 
 namespace App\Message;
 
-final readonly class SendEnrollmentConfirmation
+final class SendEnrollmentConfirmation
 {
-    public function __construct(public int $enrollmentId, public ?string $sentBy = null)
+    public bool $manualReminder = false;
+
+    public function __construct(public int $enrollmentId, public ?string $sentBy = null, bool $manualReminder = false)
     {
+        $this->manualReminder = $manualReminder;
     }
 }

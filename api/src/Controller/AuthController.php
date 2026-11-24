@@ -2,6 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Entity\AuditLog;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,8 +18,14 @@ class AuthController extends AbstractController
     }
 
     #[Route('/api/auth/login', methods: 'POST')]
-    public function login(?UserInterface $user): JsonResponse
+    public function login(?UserInterface $user, EntityManagerInterface $em): JsonResponse
     {
+        if ($user instanceof User) {
+            $user->lastLoginAt = new \DateTimeImmutable();
+            $em->persist(new AuditLog($user->email, 'LOGIN_SUCCESS', 'User', $user->getId()));
+            $em->flush();
+        }
+
         return $this->me($user);
     }
 

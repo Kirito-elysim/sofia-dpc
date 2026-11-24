@@ -37,6 +37,8 @@ class Training
         #[ORM\Column(nullable: true), Groups(['read', 'write']), Assert\Positive] public ?int $totalDurationMin = null,
         // Default seat count copied onto each new class (20 today, variable per training).
         #[ORM\Column, Groups(['read', 'write']), Assert\Positive] public int $defaultCapacity = 20,
+        #[ORM\Column(options: ['default' => true]), Groups(['read', 'write'])] public bool $active = true,
+        #[ORM\Column(length: 100, nullable: true), Groups(['read', 'write']), Assert\Length(max: 100)] public ?string $theme = null,
     ) {
     }
 

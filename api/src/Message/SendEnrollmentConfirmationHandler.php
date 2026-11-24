@@ -32,22 +32,25 @@ final class SendEnrollmentConfirmationHandler
         }
 
         $class = $enrollment->virtualClass;
+        $manual = $message->manualReminder;
+        if ($manual && !in_array($class->status, [\App\Enum\ClassStatus::PLANNED, \App\Enum\ClassStatus::IN_PROGRESS], true)) { return; }
+        $kind = $manual ? 'MANUAL_REMINDER' : 'ENROLLMENT_CONFIRMATION';
         $org = $class->getOrganization();
         $ps = $enrollment->participant;
-        $ctx = ['ps' => $ps, 'class' => $class, 'org' => $org, 'enrollment' => $enrollment];
+        $ctx = ['ps' => $ps, 'class' => $class, 'org' => $org, 'enrollment' => $enrollment, 'manual' => $manual];
 
         $email = (new Email())
             ->from(new Address($org->emailFrom, $org->name))
             ->to(new Address($ps->email, $ps->firstName.' '.mb_strtoupper($ps->lastName)))
-            ->subject(sprintf('%s — Confirmation de votre inscription', $org->name))
+            ->subject($org->name.($manual ? ' — Rappel de votre classe virtuelle' : ' — Confirmation de votre inscription'))
             ->text($this->twig->render('email/enrollment_confirmation.txt.twig', $ctx))
             ->html($this->twig->render('email/enrollment_confirmation.html.twig', $ctx));
 
         try {
             $this->mailer->send($email);
-            $this->em->persist(new MessageLog($enrollment, 'MAIL', 'ENROLLMENT_CONFIRMATION', $ps->email, 'SENT', null, $message->sentBy));
+            $this->em->persist(new MessageLog($enrollment, 'MAIL', $kind, $ps->email, 'SENT', null, $message->sentBy));
         } catch (TransportExceptionInterface $e) {
-            $this->em->persist(new MessageLog($enrollment, 'MAIL', 'ENROLLMENT_CONFIRMATION', $ps->email, 'FAILED', $e->getMessage(), $message->sentBy));
+            $this->em->persist(new MessageLog($enrollment, 'MAIL', $kind, $ps->email, 'FAILED', $e->getMessage(), $message->sentBy));
             $this->em->flush();
             throw $e; // Messenger retries (3 attempts, backoff), see messenger.yaml.
         }

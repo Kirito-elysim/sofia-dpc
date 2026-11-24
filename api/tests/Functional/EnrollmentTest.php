@@ -2,6 +2,9 @@
 
 namespace App\Tests\Functional;
 
+use App\Entity\ClassSlot;
+use App\Entity\TimeSlot;
+use App\Entity\Trainer;
 use App\Entity\Organization;
 use App\Entity\Training;
 use App\Entity\User;
@@ -68,6 +71,60 @@ class EnrollmentTest extends WebTestCase
 
         $this->assertSame('CAPACITY_REACHED', $this->enroll($c, 'b@example.test')['code']);
         $this->assertResponseStatusCodeSame(409);
+    }
+
+    public function testTrainerAndLearnerAreDistinctWithinAClass(): void
+    {
+        $class = $this->makeClass(1);
+        $other = new VirtualClass($class->training, new \DateTimeImmutable('+8 days'), 1);
+        $trainer = new Trainer('Ana', 'Test', 'ANA@example.test');
+        $time = new TimeSlot('Matin', '09:00', '13:00');
+        foreach ([$other, $trainer, $time, new ClassSlot($class, $time, $trainer)] as $entity) {
+            $this->em->persist($entity);
+        }
+        $this->em->flush();
+        $this->login('SUIVI');
+        $this->assertSame('TRAINER_ASSIGNED_TO_CLASS', $this->enroll($class, 'ana@example.test')['code']);
+        $this->assertResponseStatusCodeSame(409);
+        $this->enroll($class, 'learner@example.test');
+        $this->assertResponseStatusCodeSame(201);
+        $this->client->request('GET', '/api/virtual-classes/'.$class->getId().'/enrollments');
+        $roster = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertSame('Ana Test', $roster['teachingSlots'][0]['trainer']);
+        $this->assertCount(1, $roster['enrollments']);
+        $this->enroll($other, 'ana@example.test');
+        $this->assertResponseStatusCodeSame(201);
+    }
+
+    public function testLearnerHistoryAndManualReminderPermissions(): void
+    {
+        $class = $this->makeClass(2);
+        $this->login('SUIVI');
+        $enrollment = $this->enroll($class, 'learner@example.test');
+        $this->client->request('GET', '/api/learners?q=LEARNER');
+        $this->assertResponseIsSuccessful();
+        $rows = json_decode($this->client->getResponse()->getContent(), true)['entries'];
+        $this->assertCount(1, $rows);
+        $this->client->request('GET', '/api/learners/'.$rows[0]['id']);
+        $this->assertResponseIsSuccessful();
+        $sheet = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertSame($enrollment['id'], $sheet['classes'][0]['id']);
+        $path = '/api/enrollments/'.$enrollment['id'].'/relance';
+        $this->client->request('POST', $path);
+        $this->assertResponseStatusCodeSame(202);
+        $this->client->request('GET', '/api/audit');
+        $this->assertResponseStatusCodeSame(403);
+        $this->login('ADMIN');
+        $this->client->request('GET', '/api/audit');
+        $this->assertResponseIsSuccessful();
+        $entries = json_decode($this->client->getResponse()->getContent(), true)['entries'];
+        $this->assertContains('MANUAL_REMINDER', array_column($entries, 'action'));
+        $this->client->request('DELETE', '/api/enrollments/'.$enrollment['id']);
+        $this->client->request('POST', $path);
+        $this->assertResponseStatusCodeSame(409);
+        $this->login('LECTURE');
+        $this->client->request('POST', $path);
+        $this->assertResponseStatusCodeSame(403);
     }
 
     public function testCancelFreesSeat(): void

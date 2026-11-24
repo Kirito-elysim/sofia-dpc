@@ -1,65 +1,40 @@
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, LogOut, Monitor, Settings } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Activity, Bell, Building2, CalendarDays, ChartNoAxesColumn, ChevronDown, ClipboardList, Clock, CreditCard, FileText, GraduationCap, House, CircleHelp, Mail, Monitor, Search, Settings, UserRound, Users, Video, type LucideIcon } from 'lucide-react'
+import { NavLink, Outlet, useMatch } from 'react-router-dom'
 import { api, type Me } from '../api'
+import '../planning.css'
 
-// Phase 2 entries are visible but disabled (see CLAUDE.md).
-const SETTINGS = [
-  ['organizations', 'Organismes'],
-  ['trainings', 'Formations'],
-  ['time-slots', 'Créneaux'],
-  ['trainers', 'Formateurs'],
-] as const
-const SOON = ['Analytique', 'Facturation', 'Documents DPC']
+type Entry = [LucideIcon, string, string?]
+const main: Entry[] = [[House,'Tableau de bord','/dashboard'],[CalendarDays,'Planning','/planning'],[Monitor,'Classes','/classes'],[Users,'Participants (PS)','/learners'],[ClipboardList,'Attestations'],[Activity,'Suivi en direct','/live']]
+const settings: Entry[] = [[Building2,'Organismes','/settings/organizations'],[GraduationCap,'Formations','/settings/trainings'],[Clock,'Créneaux','/settings/time-slots'],[UserRound,'Formateurs','/settings/trainers'],[Video,'Configurations des classes virtuelles','/settings/virtual-class-configs'],[Video,'Comptes Zoom','/settings/zoom-accounts'],[Users,'Utilisateurs et rôles','/settings/users'],[Mail,'Modèles de messages','/settings/message-templates']]
 
-export default function Layout({ me }: { me: Me }) {
-  const trainer = me.roles.includes('ROLE_FORMATEUR')
+const navIcons: Record<string,string> = {
+  'Tableau de bord':'home', Planning:'planning', Classes:'classes', 'Participants (PS)':'people', Attestations:'cert', 'Suivi en direct':'live',
+  Organismes:'organization', Formations:'education', Créneaux:'clock', Formateurs:'person', 'Comptes Zoom':'zoom',
+  'Utilisateurs et rôles':'users', 'Modèles de messages':'mail', 'Journal d’audit':'audit',
+}
+function navigation([Icon,label,to]: Entry) {
+  const content = <>{navIcons[label] ? <img className="nav-picto" alt="" src={'/catalog/'+navIcons[label]+'.png'}/> : <Icon/>}{label}</>
+  return to ? <NavLink key={label} to={to}>{content}</NavLink> : <span key={label} aria-disabled="true">{content}</span>
+}
+
+export default function Layout({me}: {me: Me}) {
+  const orgPage = useMatch("/settings/organizations")
+  const settingsPage = useMatch("/settings/:section")
+  const heading = settingsPage?.params.section === "message-templates" ? "Modèles de messages" : settingsPage?.params.section === "users" ? "Utilisateurs" : orgPage ? "Organismes" : settingsPage?.params.section === "trainings" ? "Formations" : settingsPage?.params.section === "trainers" ? "Formateurs" : null
+  const planning = useMatch("/planning")
+  const dashboard = useMatch("/dashboard")
+  const [organization, setOrganization] = useState("Tous")
   const qc = useQueryClient()
-  const logout = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => undefined)
-    qc.setQueryData(['me'], null)
-  }
-  return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-60 shrink-0 flex-col bg-sidebar p-4 text-white">
-        <div className="mb-6 text-xl font-bold">SOFIA</div>
-        {trainer ? (
-          <nav className="flex flex-col gap-1 text-sm">
-            <NavLink to="/my-classes" className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2"><Monitor size={16} /> Mes classes</NavLink>
-          </nav>
-        ) : (
-        <nav className="flex flex-col gap-1 text-sm">
-          <NavLink to="/classes" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 ${isActive ? 'bg-primary' : 'hover:bg-white/10'}`}>
-            <Monitor size={16} /> Classes
-          </NavLink>
-          <div className="mt-4 flex items-center gap-2 px-3 py-1 text-xs uppercase tracking-wide text-white/60"><Settings size={14} /> Paramétrage</div>
-          {[...SETTINGS, ...(me.roles.includes('ROLE_SUPER_ADMIN') ? ([['users', 'Utilisateurs et rôles']] as const) : [])].map(([to, label]) => (
-            <NavLink key={to} to={`/settings/${to}`} className={({ isActive }) => `rounded-lg px-3 py-2 pl-8 ${isActive ? 'bg-primary' : 'hover:bg-white/10'}`}>{label}</NavLink>
-          ))}
-          <div className="mt-4" />
-          {SOON.map((l) => (
-            <span key={l} aria-disabled className="flex items-center justify-between px-3 py-2 opacity-50">
-              {l}
-              <span className="rounded bg-white/20 px-1.5 text-[10px]">Bientôt</span>
-            </span>
-          ))}
-        </nav>
-        )}
-      </aside>
-      <div className="flex-1">
-        <header className="flex items-center justify-end gap-4 border-b border-slate-200 bg-white px-6 py-3 text-sm">
-          <CalendarDays size={16} className="mr-auto text-slate-400" />
-          <span>
-            <strong>{me.name}</strong> <span className="text-slate-500">{me.roles.find((r) => r !== 'ROLE_USER')?.replace('ROLE_', '')}</span>
-          </span>
-          <button onClick={logout} aria-label="Déconnexion" className="text-slate-500 hover:text-ink">
-            <LogOut size={16} />
-          </button>
-        </header>
-        <main className="p-6">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  )
+  const trainer = me.roles.includes('ROLE_FORMATEUR')
+  const role = me.roles.find(r => r !== 'ROLE_USER')?.replace('ROLE_', '').replaceAll('_',' ').toLowerCase()
+  return <div className={dashboard ? "sofia-shell dashboard-shell" : heading ? "sofia-shell organizations-shell" : planning ? "sofia-shell planning-shell" : "sofia-shell"}><aside className="sofia-side">
+    <img className="brand" src={heading || dashboard ? "/catalog/brand.png" : planning ? "/planning/brand.png" : "/sofia-brand.png"} alt="SOFIA – Classes virtuelles DPC"/>
+    <nav>{trainer ? navigation([Monitor,'Mes classes','/my-classes']) : <>
+      {main.map(navigation)}
+      <details open><summary><Settings/>Paramétrage <ChevronDown/></summary>{settings.filter(([, ,to])=>to==='/settings/virtual-class-configs' ? me.roles.includes('ROLE_ADMIN') : !['/settings/users','/settings/zoom-accounts'].includes(to??'') || me.roles.includes('ROLE_SUPER_ADMIN')).map(navigation)}</details>
+      {me.roles.includes('ROLE_ADMIN')&&navigation([ClipboardList,'Journal d’audit','/audit'])}
+      <div className="future">{([[ChartNoAxesColumn,'Analytique'],[CreditCard,'Facturation'],[FileText,'Documents DPC']] as Entry[]).map(([Icon,label])=><span key={label} aria-disabled="true"><Icon/>{label}<small>Bientôt</small></span>)}</div>
+    </>}</nav></aside><div className="sofia-body"><header className="sofia-top">{dashboard ? <><CircleHelp/></> : heading ? <><div className="org-crumb">Paramétrage　›　 <strong>{heading}</strong></div>{orgPage?<img className="top-picto" alt="Aide" src="/organizations/helpTop.png"/>:<CircleHelp/>}</> : planning ? <img className="top-picto" alt="Recherche" src="/planning/search.png"/> : <Search/>}{planning||orgPage?<img className="top-notify" alt="Notifications" src={planning?"/planning/notify.png":"/organizations/notify.png"}/>:<Bell/>}<i/><b>{me.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</b><details><summary><span><strong>{me.name}</strong><br/>{role}</span><ChevronDown/></summary><button onClick={async()=>{await api('/auth/logout',{method:'POST'});qc.setQueryData(['me'],null)}}>Déconnexion</button></details></header><main className="sofia-main"><Outlet context={{organization,setOrganization}}/></main></div></div>
 }
