@@ -1,0 +1,36 @@
+.sofia-side,
+.sofia-top {
+  font: clamp(12px, .96vw, 16px)/1.2 "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -.035em;
+}
+
+.sofia-side {
+  width: 15.55%;
+  min-height: 100dvh;
+  background: #032852 url('/catalog/waves.png') bottom left / 100% auto no-repeat;
+}
+
+.sofia-side nav { padding: .95vw .7vw; }
+.sofia-side nav :is(a, span, summary) { min-height: 2vw; padding: .5vw .9vw; }
+.sofia-side details :is(a, span) { min-height: 1.45vw; padding: .24vw .1vw .24vw 1.9vw; }
+.sofia-side .future span { white-space: nowrap; gap: .75vw; }
+
+.sofia-top { height: 3.1vw; position: relative; }
+.sofia-top .lucide-bell {
+  overflow: visible;
+  background: radial-gradient(circle at 83% 16%, #ed0000 0 19%, transparent 21%);
+}
+
+@media (min-width: 761px) and (max-width: 1150px) {
+  .sofia-side { width: 185px; }
+}
+
+@media (max-width: 760px) {
+  .sofia-shell { display: block; }
+  .sofia-side { width: 100%; min-height: 0; padding: 0; background: #032852; }
+  .sofia-side .brand { width: 150px; }
+  .sofia-side nav { display: flex; align-items: center; overflow: auto; }
+  .sofia-side nav > * { flex: none; white-space: nowrap; }
+  .sofia-side nav > span, .sofia-side nav .future { display: none; }
+  .sofia-side details:not(:focus-within) > :not(summary) { display: none; }
+}
