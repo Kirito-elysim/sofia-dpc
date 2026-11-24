@@ -41,12 +41,14 @@ const ROLES = [
   { value: 'ROLE_ADMIN', label: 'Admin' },
   { value: 'ROLE_SUIVI', label: 'Suivi' },
   { value: 'ROLE_LECTURE', label: 'Lecture' },
+  { value: 'ROLE_FORMATEUR', label: 'Formateur (voit ses classes)' },
 ]
 
 const users: Field[] = [
   { name: 'name', label: 'Nom', required: true },
   { name: 'email', label: 'E-mail', type: 'email', required: true },
   { name: 'role', label: 'Rôle', type: 'select', required: true, options: ROLES },
+  { name: 'trainer', label: 'Formateur lié', type: 'select', relation: { path: 'trainers', label: (t) => `${t.lastName} ${t.firstName}` }, hint: 'Obligatoire pour le rôle Formateur, interdit sinon', show: (r) => (r.trainer ? `${r.trainer.lastName} ${r.trainer.firstName}` : '—') },
   { name: 'plainPassword', label: 'Mot de passe', type: 'password', createOnly: true, required: true, hint: '12 caractères minimum' },
   { name: 'active', label: 'Actif', type: 'checkbox' },
 ]

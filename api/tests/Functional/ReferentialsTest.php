@@ -135,4 +135,48 @@ class ReferentialsTest extends WebTestCase
         $this->client->jsonRequest('POST', '/api/auth/login', ['username' => 'n@example.test', 'password' => 'un-mot-de-passe-long']);
         $this->assertSame(200, $this->client->getResponse()->getStatusCode());
     }
+
+    public function testTrainerAccountSeesOnlyOwnUpcomingClasses(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $train = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation', 'defaultCapacity' => 20]);
+        $mine = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'a@example.test']);
+        $other = $this->call('POST', '/api/trainers', ['firstName' => 'C', 'lastName' => 'D', 'email' => 'c@example.test']);
+
+        // A FORMATEUR account needs exactly one trainer, and a staff account none.
+        $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_FORMATEUR', 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->assertResponseStatusCodeSame(422);
+        $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_LECTURE', 'trainer' => "/api/trainers/{$mine['id']}", 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->assertResponseStatusCodeSame(422);
+        $u = $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_FORMATEUR', 'trainer' => "/api/trainers/{$mine['id']}", 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->assertResponseStatusCodeSame(201);
+
+        $em = $this->em();
+        $t = $em->getRepository(\App\Entity\Training::class)->find($train['id']);
+        $slot = new \App\Entity\TimeSlot('Matin', '09:00', '13:00');
+        $em->persist($slot);
+        $future = new \App\Entity\VirtualClass($t, new \DateTimeImmutable('+3 days'));
+        $past = new \App\Entity\VirtualClass($t, new \DateTimeImmutable('-3 days'));
+        $others = new \App\Entity\VirtualClass($t, new \DateTimeImmutable('+4 days'));
+        foreach ([$future, $past, $others] as $c) {
+            $em->persist($c);
+        }
+        $em->persist(new \App\Entity\ClassSlot($future, $slot, $em->getRepository(\App\Entity\Trainer::class)->find($mine['id'])));
+        $em->persist(new \App\Entity\ClassSlot($past, $slot, $em->getRepository(\App\Entity\Trainer::class)->find($mine['id'])));
+        $em->persist(new \App\Entity\ClassSlot($others, $slot, $em->getRepository(\App\Entity\Trainer::class)->find($other['id'])));
+        $em->flush();
+
+        $this->client->loginUser($em->getRepository(User::class)->find($u['id']));
+        $rows = $this->call('GET', '/api/me/classes');
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(1, $rows);
+        $this->assertSame('Matin', current($rows)['slot'] ?? null);
+        $this->call('GET', '/api/organizations'); // staff API stays closed to trainers
+        $this->assertResponseStatusCodeSame(403);
+
+        $this->loginAs('SUIVI');
+        $this->call('GET', '/api/me/classes');
+        $this->assertResponseStatusCodeSame(403);
+    }
 }

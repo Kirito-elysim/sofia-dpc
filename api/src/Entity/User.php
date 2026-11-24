@@ -14,11 +14,13 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 // No DELETE: users are deactivated so the audit trail keeps pointing at a real account.
 #[ORM\Entity]
 #[ORM\Table(name: '"user"')]
 #[UniqueEntity('email')]
+#[UniqueEntity('trainer', message: 'Ce formateur a déjà un compte.')]
 #[ApiResource(
     operations: [
         new GetCollection(),
@@ -32,7 +34,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    public const ROLES = ['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUIVI', 'ROLE_LECTURE'];
+    public const ROLES = ['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUIVI', 'ROLE_LECTURE', 'ROLE_FORMATEUR'];
 
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
@@ -40,6 +42,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     // Write-only, hashed by UserProcessor, never persisted.
     #[Groups('user:write'), Assert\NotBlank(groups: ['create']), Assert\Length(min: 12, max: 4096, minMessage: '12 caractères minimum.')]
     public ?string $plainPassword = null;
+
+    // ROLE_FORMATEUR sits outside the staff hierarchy: it only reaches /api/me/classes and is bound to one Trainer.
+    #[ORM\OneToOne, Groups(['user:read', 'user:write'])]
+    public ?Trainer $trainer = null;
 
     /** @param list<string> $roles one of self::ROLES */
     public function __construct(
@@ -68,6 +74,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRole(string $role): void
     {
         $this->roles = [$role];
+    }
+
+    #[Assert\Callback]
+    public function validateTrainer(ExecutionContextInterface $ctx): void
+    {
+        if (('ROLE_FORMATEUR' === $this->getRole()) !== (null !== $this->trainer)) {
+            $ctx->buildViolation('Un compte formateur doit être lié à un formateur, et seulement lui.')->atPath('trainer')->addViolation();
+        }
     }
 
     public function getUserIdentifier(): string

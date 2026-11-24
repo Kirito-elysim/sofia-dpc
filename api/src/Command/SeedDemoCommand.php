@@ -2,7 +2,10 @@
 
 namespace App\Command;
 
+use App\Entity\ClassSlot;
 use App\Entity\Organization;
+use App\Entity\TimeSlot;
+use App\Entity\Trainer;
 use App\Entity\Training;
 use App\Entity\VirtualClass;
 use Doctrine\ORM\EntityManagerInterface;
@@ -32,8 +35,17 @@ class SeedDemoCommand extends Command
         foreach ([$sofia, $phocea, ...$trainings] as $o) {
             $this->em->persist($o);
         }
+        $trainer = new Trainer('Camille', 'Demo', 'formateur@example.test');
+        $slots = [new TimeSlot('Matin', '09:00', '13:00'), new TimeSlot('Après-midi', '14:00', '17:00')];
+        foreach ([$trainer, ...$slots] as $o) {
+            $this->em->persist($o);
+        }
         foreach ($trainings as $i => $t) {
-            $this->em->persist(new VirtualClass($t, new \DateTimeImmutable('+'.(7 + $i).' days'), $t->defaultCapacity));
+            $class = new VirtualClass($t, new \DateTimeImmutable('+'.(7 + $i).' days'), $t->defaultCapacity);
+            $this->em->persist($class);
+            foreach ($slots as $slot) {
+                $this->em->persist(new ClassSlot($class, $slot, $trainer));
+            }
         }
         $this->em->flush();
         $output->writeln('Données de démonstration créées.');

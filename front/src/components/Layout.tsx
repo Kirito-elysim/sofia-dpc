@@ -13,6 +13,7 @@ const SETTINGS = [
 const SOON = ['Analytique', 'Facturation', 'Documents DPC']
 
 export default function Layout({ me }: { me: Me }) {
+  const trainer = me.roles.includes('ROLE_FORMATEUR')
   const qc = useQueryClient()
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => undefined)
@@ -22,6 +23,11 @@ export default function Layout({ me }: { me: Me }) {
     <div className="flex min-h-screen">
       <aside className="flex w-60 shrink-0 flex-col bg-sidebar p-4 text-white">
         <div className="mb-6 text-xl font-bold">SOFIA</div>
+        {trainer ? (
+          <nav className="flex flex-col gap-1 text-sm">
+            <NavLink to="/my-classes" className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2"><Monitor size={16} /> Mes classes</NavLink>
+          </nav>
+        ) : (
         <nav className="flex flex-col gap-1 text-sm">
           <NavLink to="/classes" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 ${isActive ? 'bg-primary' : 'hover:bg-white/10'}`}>
             <Monitor size={16} /> Classes
@@ -38,6 +44,7 @@ export default function Layout({ me }: { me: Me }) {
             </span>
           ))}
         </nav>
+        )}
       </aside>
       <div className="flex-1">
         <header className="flex items-center justify-end gap-4 border-b border-slate-200 bg-white px-6 py-3 text-sm">

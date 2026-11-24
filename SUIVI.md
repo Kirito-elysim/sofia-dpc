@@ -57,3 +57,6 @@ Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : 
 ## Journal
 - 2026-11-24 (2) : CRUD des référentiels (organismes, formations, créneaux, formateurs, utilisateurs/rôles) + audit Doctrine automatique. **Les classes virtuelles viennent en dernier** (demande du client) : calendrier, création de classe, Zoom et relances restent à faire après le paramétrage.
 - 2026-11-24 : initialisation du dépôt, socle API/front, système d'inscription + mail de confirmation (Mailpit vérifié de bout en bout).
+
+- [x] Compte formateur (ROLE_FORMATEUR) + « Mes classes » (2026-11-24)
+- [ ] Rôles staff par organisme (ex. ADMIN sur SOFIA, LECTURE sur PHOCEA) : non fait, à confirmer avec le client

@@ -4,6 +4,7 @@ import { api, type Me } from './api'
 import Layout from './components/Layout'
 import ClassDetail from './pages/ClassDetail'
 import Classes from './pages/Classes'
+import MyClasses from './pages/MyClasses'
 import Login from './pages/Login'
 import { Organizations, TimeSlots, Trainers, Trainings, Users } from './pages/Settings'
 
@@ -11,6 +12,15 @@ export default function App() {
   const me = useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/auth/me') })
   if (me.isLoading) return null
   if (!me.data) return <Login />
+  if (me.data.roles.includes('ROLE_FORMATEUR'))
+    return (
+      <Routes>
+        <Route element={<Layout me={me.data} />}>
+          <Route path="my-classes" element={<MyClasses />} />
+          <Route path="*" element={<Navigate to="/my-classes" replace />} />
+        </Route>
+      </Routes>
+    )
   const isAdmin = me.data.roles.includes('ROLE_ADMIN')
   return (
     <Routes>

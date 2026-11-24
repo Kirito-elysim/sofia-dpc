@@ -80,3 +80,9 @@ cd front && npm run lint && npm test && npm run build
 - En test, le transport Messenger `in-memory` est remis à zéro entre deux requêtes : n'asserter la file qu'juste après la requête.
 - Les ports hôte 8025 et 8000/5432/5173 peuvent déjà être pris : Mailpit est exposé sur 8026.
 - Aucune donnée réelle de PS dans le code, fixtures ou tests (règle CLAUDE.md) ; `app:seed-demo` est fictif.
+
+## Rôles par contexte : compte formateur
+- `ROLE_FORMATEUR` est **hors hiérarchie** staff : il n'accède qu'à `GET /api/me/classes` (ses demi-journées à venir, annulées exclues) et à l'écran « Mes classes ». Le reste de l'API lui renvoie 403.
+- Un compte FORMATEUR est lié à exactement un `Trainer` (`User.trainer`, unique) ; un compte staff n'en a pas (validation 422). Création : Paramétrage > Utilisateurs et rôles.
+- `ClassSlot` (classe + créneau + formateur) existe en version minimale ; la création de classes avec Zoom viendra ensuite. `app:seed-demo` crée un formateur et des slots de démo.
+- Pas de rôle par organisme : un rôle staff est global (à faire si besoin, voir SUIVI).

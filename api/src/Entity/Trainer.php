@@ -41,15 +41,15 @@ class Trainer
     private Collection $trainings;
 
     public function __construct(
-        #[ORM\Column(length: 100), Groups(['read', 'write']), Assert\NotBlank] public string $firstName,
-        #[ORM\Column(length: 100), Groups(['read', 'write']), Assert\NotBlank] public string $lastName,
+        #[ORM\Column(length: 100), Groups(['read', 'write', 'user:read']), Assert\NotBlank] public string $firstName,
+        #[ORM\Column(length: 100), Groups(['read', 'write', 'user:read']), Assert\NotBlank] public string $lastName,
         #[ORM\Column(length: 180, unique: true), Groups(['read', 'write']), Assert\NotBlank, Assert\Email] public string $email,
         #[ORM\Column(length: 20, nullable: true), Groups(['read', 'write']), Assert\Regex('/^\+?[0-9 .]*$/')] public ?string $phone = null,
     ) {
         $this->trainings = new ArrayCollection();
     }
 
-    #[Groups('read')]
+    #[Groups(['read', 'user:read'])]
     public function getId(): ?int
     {
         return $this->id;
