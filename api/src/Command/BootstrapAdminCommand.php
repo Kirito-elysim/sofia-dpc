@@ -18,13 +18,14 @@ final class BootstrapAdminCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $hash = getenv('SOFIA_BOOTSTRAP_ADMIN_HASH') ?: '';
-        if ($hash === '') {
+        $encodedHash = getenv('SOFIA_BOOTSTRAP_ADMIN_HASH') ?: '';
+        if ($encodedHash === '') {
             return Command::SUCCESS;
         }
 
+        $hash = base64_decode($encodedHash, true);
         $email = getenv('SOFIA_BOOTSTRAP_ADMIN_EMAIL') ?: '';
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || password_get_info($hash)['algoName'] !== 'bcrypt') {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $hash === false || password_get_info($hash)['algoName'] !== 'bcrypt') {
             $output->writeln('<error>Paramètres de création du premier administrateur invalides.</error>');
             return Command::INVALID;
         }
