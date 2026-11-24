@@ -1,0 +1,8 @@
+<p>Bonjour {{ ps.firstName }} {{ ps.lastName|upper }},</p>
+<p>Votre inscription à la classe virtuelle <strong>« {{ class.training.title }} »</strong> est confirmée.</p>
+<ul>
+  <li>Date : {{ class.date|date('d/m/Y') }}</li>
+  <li>Organisme : {{ org.name }}</li>
+</ul>
+<p>Vous recevrez votre lien de connexion personnel avant la classe, ainsi que des rappels.</p>
+<p>Cordialement,<br>{{ org.name }}</p>

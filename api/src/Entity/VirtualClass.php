@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Entity;
+
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use App\Enum\ClassStatus;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\Criteria;
+use Doctrine\Common\Collections\Selectable;
+use App\Enum\EnrollmentStatus;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
+
+// Slots, trainers and Zoom accounts (ClassSlot) come in the next task.
+#[ORM\Entity]
+#[ApiResource(operations: [new GetCollection(), new Get()], security: "is_granted('ROLE_LECTURE')", normalizationContext: ['groups' => ['read']], order: ['date' => 'ASC'])]
+class VirtualClass
+{
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    private ?int $id = null;
+
+    /** @var Collection<int, Enrollment>&Selectable<int, Enrollment> */
+    #[ORM\OneToMany(targetEntity: Enrollment::class, mappedBy: 'virtualClass', fetch: 'EXTRA_LAZY')]
+    private Collection $enrollments;
+
+    public function __construct(
+        #[ORM\ManyToOne, Groups('read')] public Training $training,
+        #[ORM\Column(type: 'date_immutable'), Groups('read')] public \DateTimeImmutable $date,
+        #[ORM\Column, Groups('read')] public int $capacity = 20,
+        #[ORM\Column(enumType: ClassStatus::class), Groups('read')] public ClassStatus $status = ClassStatus::PLANNED,
+    ) {
+        $this->enrollments = new ArrayCollection();
+    }
+
+    #[Groups('read')]
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getOrganization(): Organization
+    {
+        return $this->training->organization;
+    }
+
+    #[Groups('read')]
+    public function getEnrolledCount(): int
+    {
+        return $this->enrollments->matching(Criteria::create()->where(Criteria::expr()->eq('status', EnrollmentStatus::ACTIVE)))->count();
+    }
+}

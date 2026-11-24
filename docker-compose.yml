@@ -1,0 +1,33 @@
+# Dev stack. Prod (compose.prod.yaml) is not written yet, see docs/SUIVI.md.
+services:
+  php:
+    build: { context: docker, dockerfile: php.Dockerfile }
+    volumes: [ "./api:/app", "./docker/Caddyfile:/etc/frankenphp/Caddyfile:ro" ]
+    ports: [ "8000:80" ]
+    depends_on: [ database, redis ]
+  worker:
+    build: { context: docker, dockerfile: php.Dockerfile }
+    command: php bin/console messenger:consume async -vv --time-limit=3600
+    volumes: [ "./api:/app" ]
+    restart: always
+    depends_on: [ database, redis ]
+  database:
+    image: postgres:16
+    environment: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: app }
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+    ports: [ "5432:5432" ]
+  redis:
+    image: redis:7-alpine
+  mailpit:
+    image: axllent/mailpit
+    ports: [ "8026:8025" ]
+  front:
+    image: node:22-alpine
+    working_dir: /app
+    environment: { API_PROXY: "http://php" }
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes: [ "./front:/app" ]
+    ports: [ "5173:5173" ]
+    depends_on: [ php ]
+volumes:
+  pgdata:

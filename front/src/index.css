@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sidebar: #0a2552;
+  --color-primary: #1557f5;
+  --color-page: #f8fafc;
+  --color-ink: #1e2347;
+  --color-sofia: #1e6bf0;
+  --color-sofia-bg: #e8f2fd;
+  --color-phocea: #9b51e0;
+  --color-planned: #3b82f6;
+  --color-progress: #f59e0b;
+  --color-done: #2e9e44;
+  --color-cancelled: #e5484d;
+}
+
+body { @apply bg-page text-ink; }
