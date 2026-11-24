@@ -5,7 +5,11 @@ api_platform:
     formats:
         json: ['application/json']
         jsonld: ['application/ld+json']
+    # Referentials are small; plain-JSON collections are returned whole (no paging). Revisit for classes/enrollments.
+    exception_to_status:
+        Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException: 409
     defaults:
+        pagination_enabled: false
         stateless: false # session cookie auth
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']

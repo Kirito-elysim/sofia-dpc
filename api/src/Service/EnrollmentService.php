@@ -17,7 +17,6 @@ class EnrollmentService
     public function __construct(
         private EntityManagerInterface $em,
         private MessageBusInterface $bus,
-        private AuditLogger $audit,
         private Security $security,
     ) {
     }
@@ -60,8 +59,6 @@ class EnrollmentService
             $this->em->persist($enrollment);
             $this->em->flush();
 
-            $this->audit->log('ENROLLMENT_CREATED', 'Enrollment', $enrollment->getId(), ['class' => $class->getId(), 'participant' => $ps->getId()]);
-            $this->em->flush();
 
             $conn->commit();
         } catch (\Throwable $e) {
@@ -78,7 +75,6 @@ class EnrollmentService
     public function cancel(Enrollment $enrollment): void
     {
         $enrollment->status = EnrollmentStatus::CANCELLED;
-        $this->audit->log('ENROLLMENT_CANCELLED', 'Enrollment', $enrollment->getId());
         $this->em->flush();
     }
 }

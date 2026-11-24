@@ -15,6 +15,7 @@ security:
         main:
             lazy: true
             provider: app_user
+            user_checker: App\Security\UserChecker
             # JSON login => httpOnly session cookie. TOTP 2FA for admins: not done yet (see docs/SUIVI.md).
             json_login:
                 check_path: /api/auth/login

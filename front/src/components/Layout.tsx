@@ -1,9 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, LogOut, Monitor } from 'lucide-react'
+import { CalendarDays, LogOut, Monitor, Settings } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { api, type Me } from '../api'
 
 // Phase 2 entries are visible but disabled (see CLAUDE.md).
+const SETTINGS = [
+  ['organizations', 'Organismes'],
+  ['trainings', 'Formations'],
+  ['time-slots', 'Créneaux'],
+  ['trainers', 'Formateurs'],
+] as const
 const SOON = ['Analytique', 'Facturation', 'Documents DPC']
 
 export default function Layout({ me }: { me: Me }) {
@@ -20,6 +26,11 @@ export default function Layout({ me }: { me: Me }) {
           <NavLink to="/classes" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 ${isActive ? 'bg-primary' : 'hover:bg-white/10'}`}>
             <Monitor size={16} /> Classes
           </NavLink>
+          <div className="mt-4 flex items-center gap-2 px-3 py-1 text-xs uppercase tracking-wide text-white/60"><Settings size={14} /> Paramétrage</div>
+          {[...SETTINGS, ...(me.roles.includes('ROLE_SUPER_ADMIN') ? ([['users', 'Utilisateurs et rôles']] as const) : [])].map(([to, label]) => (
+            <NavLink key={to} to={`/settings/${to}`} className={({ isActive }) => `rounded-lg px-3 py-2 pl-8 ${isActive ? 'bg-primary' : 'hover:bg-white/10'}`}>{label}</NavLink>
+          ))}
+          <div className="mt-4" />
           {SOON.map((l) => (
             <span key={l} aria-disabled className="flex items-center justify-between px-3 py-2 opacity-50">
               {l}
