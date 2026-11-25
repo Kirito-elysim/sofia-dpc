@@ -1,6 +1,6 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {Briefcase,Building2,CalendarCheck,ChevronRight,Clock,FileText,GraduationCap,IdCard,Info,KeyRound,Mail,Phone,Save,Stethoscope,Upload,UserRound,UserRoundPlus,Video} from 'lucide-react'
+import {Briefcase,Building2,CalendarCheck,Clock,FileText,GraduationCap,IdCard,Info,KeyRound,Mail,Phone,Save,Stethoscope,Upload,UserRound,UserRoundPlus,Video} from 'lucide-react'
 import {Link,useLocation,useNavigate,useParams} from 'react-router-dom'
 import {api} from '../api'
 import {Card,OrganizationPicker,PhotoPicker,useOrganizations} from './FormParts'
@@ -81,7 +81,6 @@ function TrainerForm({trainer}:{trainer?:Trainer}) {
   const field=(name:keyof Trainer,label:string,Icon:typeof Mail,props:React.InputHTMLAttributes<HTMLInputElement>)=><label>{label} {props.required&&<em>*</em>}<span className="uc-input-icon"><Icon aria-hidden="true"/><input name={name} defaultValue={String(trainer?.[name]??'')} {...props}/></span></label>
   const title=trainer?'Modifier un formateur':'Créer un formateur'
   return <section className="user-create trainer-form">
-    <nav aria-label="Fil d’Ariane"><span>Paramétrage</span><ChevronRight aria-hidden="true"/><Link to={listPath}>Formateurs</Link><ChevronRight aria-hidden="true"/><strong aria-current="page">{title}</strong></nav>
     <header className="uc-heading"><i><UserRoundPlus aria-hidden="true"/></i><div><h1>{title}</h1><p>{trainer?'Mettez à jour le formateur et ses informations d’intervention.':'Ajoutez un formateur et définissez ses informations d’intervention.'}</p></div></header>
     {notice&&<p role="status" className="tf-notice">{notice}</p>}
     <form onSubmit={submit}>
@@ -133,7 +132,7 @@ function TrainerForm({trainer}:{trainer?:Trainer}) {
             })}</ul>
             {(fileError||stored.error)&&<p role="alert" className="uc-error">{fileError||stored.error?.message}</p>}
           </Card>
-          {trainer&&<TrainerAccess trainer={trainer}/>}
+          {trainer&&<TrainerAccess trainer={trainer} active={active}/>}
           <Card title="Aperçu de planification" icon={<Info aria-hidden="true"/>}>
             <ul className="tf-preview">
               <li><Building2 aria-hidden="true"/><span><b>Organismes sélectionnés :</b> {selected||'aucun'}</span></li>
@@ -153,15 +152,17 @@ function TrainerForm({trainer}:{trainer?:Trainer}) {
   </section>
 }
 
-function TrainerAccess({trainer}:{trainer:Trainer}) {
+/** Follows the status switch at once; actions wait for it to be saved, the server only knows the saved one. */
+function TrainerAccess({trainer,active}:{trainer:Trainer;active:boolean}) {
   const client=useQueryClient()
   const accounts=useQuery({queryKey:['trainer-accounts'],queryFn:()=>api<Account[]>('/trainer-accounts')})
   const access=useMutation({mutationFn:(active?:boolean)=>grantAccess(trainer.id,active),onSuccess:()=>client.invalidateQueries({queryKey:['trainer-accounts']})})
   const account=accounts.data?.find(a=>a.trainerId===trainer.id)
   return <Card title="Accès à Sofia" icon={<KeyRound aria-hidden="true"/>}><div className="tf-access">
     {accounts.isLoading?<p>Chargement…</p>
+      :!active?<p role="status">Formateur inactif : {account?.staff?'« Mes classes » est fermé, le compte de gestion reste utilisable.':'aucune connexion possible.'}{trainer.active&&' Enregistrez la fiche pour appliquer.'}</p>
+      :!trainer.active?<p role="status">Formateur actif : enregistrez la fiche pour {account?'rétablir':'gérer'} l’accès.</p>
       :account?.staff?<p>Rattaché à un compte de gestion. « Mes classes » est ouvert tant que la fiche est active.</p>
-      :!trainer.active?<p>Fiche désactivée : aucun accès possible.</p>
       :!account?<><p>Aucun accès.</p><button type="button" disabled={access.isPending} onClick={()=>access.mutate(undefined)}>Créer l’accès à Sofia</button></>
       :<><p>Compte formateur {account.active?'actif':'désactivé'}.</p>{account.active&&<button type="button" disabled={access.isPending} onClick={()=>access.mutate(undefined)}>Renvoyer l’accès</button>}<button type="button" disabled={access.isPending} onClick={()=>access.mutate(!account.active)}>{account.active?'Désactiver l’accès':'Activer l’accès'}</button></>}
     {access.data&&<p role="status">{access.data}</p>}

@@ -600,3 +600,17 @@ Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 t
 - `ListHeading` et les propriétés `title` / `tools` de `DataTable` portent ce titre. Le nombre est le total avant filtres. Organismes : boutons « Cartes » et « Liste » dans cet en-tête, y compris en vue cartes.
 - Vérifications : lint (un avertissement), 2 tests, build ; recette navigateur en 1440 × 900 d’Utilisateurs, Organismes (cartes), Rôles et Créneaux (liste et calendaire). Formateurs et Formations non revus à l’écran. En attente de commit.
 - Commité sur la branche `feat/composants-listes` à la demande de l’utilisateur. Ni fusionné, ni poussé. La mention « En attente de commit » est close.
+
+### Fil d’Ariane formateur et accès — 25 novembre 2026
+
+- Demande de l’utilisateur : retirer « Paramétrage > Formateurs > Créer un formateur ». Retiré en création et en modification ; le retour se fait par Annuler ou la barre latérale.
+- Question : impossible de se connecter en tant qu’un formateur. Cause relevée dans le journal : fiche créée inactive (aucune invitation envoyée), activée ensuite sans créer l’accès ; aucun compte n’existe. Remède : « Créer l’accès à Sofia » sur sa fiche. Rien modifié dans ses données.
+- Amélioration possible, non développée : proposer la création de l’accès à l’activation, ou expliquer le bouton grisé.
+- Vérifications : lint (un avertissement), 2 tests, build. Non revu à l’écran. Non commité.
+
+### Accès formateur et statut — 25 novembre 2026
+
+- Demande de l’utilisateur : la carte « Accès à Sofia » doit suivre l’interrupteur de statut sans attendre.
+- Elle réagit immédiatement et demande d’enregistrer tant que le statut affiché diffère du statut enregistré ; les boutons d’accès sont masqués dans cet intervalle.
+- Vérifications : lint (un avertissement), 2 tests, build ; bascule contrôlée au navigateur sans enregistrer. Non commité.
+- Commité, fusionné dans `main` et poussé sur `origin` à la demande de l’utilisateur (composants de liste compris). Les mentions « non commité » sont closes. Déploiement non vérifié.
