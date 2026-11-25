@@ -1,3 +1,4 @@
+import {CalendarDays} from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
@@ -20,7 +21,7 @@ export default function ScheduleClass(){
   },onSuccess:r=>{void cache.invalidateQueries({queryKey:['classes']});void cache.invalidateQueries({queryKey:['planning']});navigate('/classes/'+r.id)}})
   function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();mutation.mutate({...Object.fromEntries(new FormData(e.currentTarget)),trainingId:training,capacity,slots:Object.entries(slots).filter(([,trainer])=>trainer).map(([slot,trainerId])=>({timeSlotId:Number(slot),trainerId}))})}
   const input='block w-full rounded-md border border-slate-300 bg-white p-2'
-  return <section className="max-w-3xl"><Link to="/planning">← Planning</Link><h1 className="my-4 text-2xl font-bold">Créer une classe virtuelle</h1><form className="grid gap-4 rounded-xl bg-white p-5" onSubmit={submit}>
+  return <section className="max-w-3xl"><Link to="/planning">← Planning</Link><header className="page-heading"><CalendarDays/><h1 className="my-4 text-2xl font-bold">Créer une classe virtuelle</h1></header><form className="sofia-card grid gap-4 p-5" onSubmit={submit}>
     <label>Formation et organisme<select className={input} required value={training||''} onChange={e=>{const id=Number(e.target.value);setTraining(id);setCapacity(trainings.data?.find(t=>t.id===id)?.defaultCapacity??20);setSlots({})}}><option value="">Choisir une formation</option>{trainings.data?.filter(t=>t.active&&t.organization.active).map(t=><option key={t.id} value={t.id}>{t.organization.name} · {t.title}</option>)}</select></label>
     <div className="grid grid-cols-2 gap-4"><label>Date<input className={input} name="date" type="date" required/></label><label>Capacité<input className={input} type="number" min="1" required value={capacity||''} onChange={e=>setCapacity(Number(e.target.value))}/></label></div>
     <div className="grid grid-cols-2 gap-4"><label>Action DPC<input className={input} name="dpcAction" maxLength={80} required/></label><label>Session DPC<input className={input} name="dpcSession" maxLength={80} required/></label></div>

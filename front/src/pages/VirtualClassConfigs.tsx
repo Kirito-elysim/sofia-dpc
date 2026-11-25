@@ -1,3 +1,4 @@
+import {Plus,Settings} from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '../api'
@@ -22,8 +23,8 @@ export default function VirtualClassConfigs() {
   const data=directory.data
   const moved=data?.organizations.filter(org=>draft?.organizations.includes(org.id)&&org.config!=null&&org.config!==draft.id)
   return <section className="ad-work">
-    <header><div><h1>Configurations des classes virtuelles</h1><p>Réglages Zoom et comptes hôtes par organisme</p></div></header>
-    <div className="ad-toolbar"><button className="primary" onClick={()=>open(fresh)}>Nouvelle configuration</button></div>
+    <header><Settings/><div><h1>Configurations des classes virtuelles</h1><p>Réglages Zoom et comptes hôtes par organisme</p></div><button className="primary page-add" onClick={()=>open(fresh)}><Plus/>Nouvelle configuration</button></header>
+
     {directory.error&&<p role="alert">{directory.error.message}</p>}
     {directory.isLoading&&<p>Chargement…</p>}
     {data&&<div className="ad-table"><table><thead><tr><th>Configuration</th><th>Organismes</th><th>Statut</th><th>Actions</th></tr></thead>

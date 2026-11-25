@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
   --color-sidebar: #0a2552;
   --color-primary: #1557f5;
   --color-page: #f8fafc;
@@ -15,3 +16,90 @@
 }
 
 body { @apply bg-page text-ink; }
+
+:root {
+  --card-radius: 12px;
+  --card-border: #d9e3f1;
+  --card-shadow: 0 2px 8px rgb(24 54 98 / 6%);
+  --card-background: #fff;
+  --card-gradient: linear-gradient(155deg, #fff, #e9f0fc);
+}
+
+/* Shared surfaces retain their page-specific grid, content spacing and interactions. */
+#root :is(.sofia-card, .db-panel, .panels section, .oa-filters, .oa-table,
+  .oa-empty, .oa-notes section, .ad-panel, .ad-table, .msg-cards > section,
+  .msg-preview, .msg-trigger, .vl-sum, .vc-panel, .od-cards article, .oe-tabs,
+  .oe-panel, .oe aside, .oe footer, .ow-progress, .ow-guide,
+  .ow:not([data-step="5"]) fieldset, .ow[data-step="5"] .ow-panel,
+  .ow[data-step="5"] footer, .login-card) {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+/* Status and organisation accents remain visible on contextual cards. */
+#root :is(.db-stat, .db-course, .kpi, .session, .od-stats > div, .vl-card) {
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+#root .sofia-shell {
+  letter-spacing: normal;
+}
+#root .sofia-main h1 {
+  font-size: clamp(24px, 1.85vw, 30px);
+  font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -.03em;
+}
+#root .sofia-main h2 {
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+#root :is(.db-panel, .od-cards article) { --card-background: var(--card-gradient); }
+
+.sofia-shell { --card-background: var(--card-gradient); }
+#root .vl-card { background: var(--card-gradient); }
+#root .sofia-main:has(:is(.page-heading,.oa-title,.ad-work,.plan-heading)) {
+  padding: .8vw .8vw 2vw 1.15vw;
+}
+#root .ad-work { padding-inline: 0; }
+#root :is(.page-heading,.oa-title,.ad-work > header,.plan-heading) {
+  display: flex;
+  align-items: center;
+  gap: 1.1vw;
+  width: 100%;
+  min-height: clamp(52px,3.8vw,68px);
+  padding: 0 .25vw .7vw .7vw;
+  margin: 0;
+}
+#root :is(.page-heading,.oa-title,.ad-work > header,.plan-heading) > :is(img,svg) {
+  flex: none;
+  width: 3.3vw;
+  min-width: 36px;
+  height: max(30px,2.75vw);
+  object-fit: contain;
+  color: #005aff;
+}
+#root .page-heading h1 { margin: 0; }
+#root .page-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6em;
+  flex: none;
+  margin-left: auto;
+  padding: .85em 1.5em;
+  border: 0;
+  border-radius: .55em;
+  background: linear-gradient(#0076ff,#003dff);
+  color: white;
+  font: 550 clamp(13px,.93vw,16px)/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+#root .page-add svg { width: 1.3em; height: 1.3em; }
+@media (max-width: 1000px) {
+  #root :is(.page-heading,.oa-title,.ad-work > header,.plan-heading) { flex-wrap: wrap; }
+}

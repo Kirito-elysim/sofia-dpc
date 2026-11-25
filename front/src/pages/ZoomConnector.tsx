@@ -1,3 +1,4 @@
+import {Video} from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -30,7 +31,7 @@ export default function ZoomConnector() {
   const issue=status.error??app.error??start.error??hosts.error??attach.error
 
   return <section className="ad-work">
-    <header><div><h1>Connecteur Zoom</h1><p>Connectez un compte et affectez ses hôtes à un organisme.</p></div></header>
+    <header><Video/><div><h1>Connecteur Zoom</h1><p>Connectez un compte et affectez ses hôtes à un organisme.</p></div></header>
     {params.get('zoom')==='connected'&&<p role="status">Compte Zoom connecté.</p>}
     {params.get('zoom')==='error'&&<p role="alert">Connexion Zoom interrompue. Vérifiez l’autorisation et recommencez.</p>}
     {issue&&<p role="alert">{issue.message}</p>}

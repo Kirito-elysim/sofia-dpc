@@ -37,3 +37,7 @@
   height: 1.2em;
   vertical-align: middle;
 }
+
+.catalog .oa-title > .oa-icon { height: 2.75vw; min-height: 30px; object-fit: contain }
+.catalog .oa-title > .blue { font-weight: 550; white-space: nowrap }
+.catalog .oa-title > .blue svg { width: 1.3em; height: 1.3em }

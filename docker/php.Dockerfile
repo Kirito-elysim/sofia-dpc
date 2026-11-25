@@ -4,3 +4,5 @@ RUN install-php-extensions pdo_pgsql intl zip opcache redis apcu \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 WORKDIR /app
+
+COPY uploads.ini /usr/local/etc/php/conf.d/sofia-uploads.ini

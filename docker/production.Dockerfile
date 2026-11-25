@@ -15,3 +15,5 @@ COPY api/ ./
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 COPY --from=frontend /build/dist /app/public
 COPY docker/production.Caddyfile /etc/frankenphp/Caddyfile
+
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/sofia-uploads.ini

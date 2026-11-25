@@ -13,6 +13,8 @@ import Classes from './pages/Classes'
 import MyClasses from './pages/MyClasses'
 import Login from './pages/Login'
 import VirtualClassConfigs from './pages/VirtualClassConfigs'
+import OrganizationWizard from './pages/OrganizationWizard'
+import OrganizationProfile from './pages/OrganizationProfile'
 import Organizations from './pages/Organizations'
 import { TimeSlots, Trainers, Trainings, Users, ZoomAccounts } from './pages/Settings'
 
@@ -46,6 +48,8 @@ export default function App() {
         <Route path="classes/:id" element={<ClassDetail canEdit={me.data.roles.includes('ROLE_SUIVI')} />} />
         <Route path="settings/message-templates" element={<MessageTemplates canWrite={isAdmin}/>}/>
         {isAdmin&&<Route path="settings/virtual-class-configs" element={<VirtualClassConfigs/>}/>}
+        {isAdmin&&<Route path="settings/organizations/new" element={<OrganizationWizard user={me.data.email}/>}/>}
+        {isAdmin&&<Route path="settings/organizations/:id/edit" element={<OrganizationProfile/>}/>}
         <Route path="settings/organizations" element={<Organizations canWrite={isAdmin} />} />
         <Route path="settings/trainings" element={<Trainings canWrite={isAdmin} />} />
         <Route path="settings/time-slots" element={<TimeSlots canWrite={isAdmin} />} />

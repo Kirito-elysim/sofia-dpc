@@ -1,0 +1,11 @@
+export const fields=[
+  [['name','Nom de l’organisme','Ex. SOFIA Santé & Formation'],['code','Code','Ex. SOF'],['legalForm','Forme juridique'],['siret','SIRET','Ex. 953 169 695 00012'],['andpcNumber','N° ANDPC','Ex. 1234'],['numberFormationDPC','N° de déclaration d’activité'],['active','Statut']],
+  [['address','Adresse'],['addressExtra','Complément d’adresse'],['zipCode','Code postal'],['city','Ville'],['phone','Téléphone principal'],['email','E-mail de contact'],['responsible','Responsable de l’organisme'],['responsibleRole','Fonction'],['url','Site web','https://']],
+  [['billingName','Raison sociale de facturation'],['billingAddress','Adresse de facturation'],['billingZip','Code postal'],['billingCity','Ville'],['billingEmail','E-mail de facturation'],['billingPhone','Téléphone de facturation'],['numberTVA','N° TVA intracommunautaire'],['paymentTerms','Conditions de paiement'],['iban','IBAN'],['bic','BIC']],
+  [['smsSender','Expéditeur SMS','Ex. SOFIADPC'],['emailFrom','E-mail d’envoi'],['replyEmail','E-mail de réponse'],['contactName','Nom du contact principal'],['contactPhone','Téléphone du contact']],
+]
+export const optional=['legalForm','numberFormationDPC','addressExtra','url','numberTVA']
+export const options:Record<string,string[]>={legalForm:['Association','SAS','SASU','SARL','EURL','Entreprise individuelle','Autre'],paymentTerms:['À réception','30 jours','30 jours fin de mois','45 jours fin de mois','60 jours']}
+export const types:Record<string,string>={email:'email',billingEmail:'email',replyEmail:'email',emailFrom:'email',url:'url',phone:'tel',billingPhone:'tel',contactPhone:'tel'}
+export const preferences=[['operational','Recevoir les notifications opérationnelles','Informations de fonctionnement (sessions, inscriptions, incidents, etc.).'],['news','Autoriser les communications SOFIA','Actualités, mises à jour produits et bonnes pratiques.'],['alerts','Recevoir les alertes administratives','Rappels d’échéances, pièces à fournir et suivi de conformité.']]
+export const docs=[['logo','Logo'],['signature','Signature'],['stamp','Cachet'],['kbis','Kbis'],['qualiopi','Certificat Qualiopi'],['rib','RIB'],['declaration','Justificatif de déclaration d’activité']]

@@ -1,6 +1,6 @@
 .sofia-side,
 .sofia-top {
-  font: clamp(12px, .96vw, 16px)/1.2 "Helvetica Neue", Arial, sans-serif;
+  font: clamp(12px, .96vw, 16px)/1.2 var(--font-sans);
   letter-spacing: -.035em;
 }
 

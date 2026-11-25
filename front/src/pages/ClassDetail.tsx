@@ -1,3 +1,4 @@
+import {Video} from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -40,14 +41,14 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
   const active = list.data?.enrollments.filter((x) => x.status === 'ACTIVE') ?? []
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="page-heading"><Video/>
         <h1 className="text-2xl font-bold">{c.training.title}</h1>
         <OrganizationBadge {...c.training.organization} />
         <StatusBadge status={c.status} />
         <span className="ml-auto text-sm">{c.enrolledCount} / {c.capacity} places apprenants occupées</span>
       </div>
 
-      <section className="mb-5 rounded-xl bg-white p-4 shadow-sm">
+      <section className="sofia-card mb-5 p-4">
         <h2 className="mb-2 text-lg font-semibold">Formateurs par créneau</h2>
         {list.isLoading && <p>Chargement des affectations…</p>}
         {list.error && <p role="alert">{list.error.message}</p>}
@@ -63,7 +64,7 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
       </section>
       <h2 className="mb-3 text-lg font-semibold">Apprenants inscrits (PS)</h2>
       {canEdit && c.status === 'PLANNED' && (
-        <form onSubmit={submit} className="mb-6 grid grid-cols-5 gap-2 rounded-xl bg-white p-4 shadow-sm">
+        <form onSubmit={submit} className="sofia-card mb-6 grid grid-cols-5 gap-2 p-4">
           <input name="firstName" required placeholder="Prénom" className={input} />
           <input name="lastName" required placeholder="Nom" className={input} />
           <input name="email" type="email" required placeholder="E-mail" className={input} />
@@ -74,7 +75,7 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
         </form>
       )}
 
-      <table className="w-full rounded-xl bg-white text-left text-sm shadow-sm">
+      <table className="sofia-card w-full text-left text-sm">
         <thead className="text-slate-500"><tr><th className="p-3">Apprenant</th><th>E-mail</th><th>Téléphone</th><th>RPPS</th><th>Inscription Zoom par créneau</th><th /></tr></thead>
         <tbody>
           {active.map((x) => (

@@ -179,3 +179,20 @@ Les secrets et les jetons sont chiffrés. Conserver api/var/zoom-oauth.key sur u
 
 ### Déploiement Coolify
 Le fichier compose.production.yml construit Sofia avec le frontend et l’API sur un seul domaine et des volumes dédiés. Configurer le domaine https://sofia.mahdora.fr sur le service sofia, port 80. Renseigner APP_SECRET, POSTGRES_PASSWORD et DATABASE_URL dans Coolify. DATABASE_URL doit cibler le service database et utiliser le même mot de passe, encodé dans l’URL. MAILER_DSN est facultatif et laisse les envois désactivés par défaut. Les workers de provisionnement Zoom et de rappels restent hors de cette configuration initiale.
+
+### Recette locale des sept pièces d’un organisme — 25 novembre 2026
+
+Parcours vérifié dans Chromium à 1440 × 900, sur la pile Docker locale et la vraie API Sofia. Depuis **Organismes → Modifier → Documents**, la recette a utilisé un organisme dédié, trois images PNG distinctes (logo, signature et cachet) et quatre PDF distincts (Kbis, certificat Qualiopi, RIB et justificatif de déclaration d’activité).
+
+| Étape | Vérification effectuée | Résultat |
+|---|---|---|
+| Ajout | Sélection des sept fichiers, enregistrement puis réouverture de la fiche | Les sept noms et contenus sont conservés. |
+| Aperçus | Décodage des trois images dans le navigateur, avant et après enregistrement | Les dimensions de chaque aperçu correspondent au fichier choisi. |
+| Téléchargement | Clic sur Télécharger pour chacun des quatre PDF | Le nom et les octets de chaque téléchargement correspondent à la source. |
+| Remplacement | Remplacement des sept pièces par une seconde version distincte | Après enregistrement et réouverture, les aperçus et PDF correspondent à la seconde version. Les octets des sept fichiers servis par l’API ont aussi été comparés aux sources. |
+| Annulation | Suppression du cachet, puis clic sur Annuler et réouverture | Les sept pièces sont toujours présentes. |
+| Suppression | Retrait des sept pièces puis enregistrement | Avant validation, l’API liste encore les sept pièces. Après réouverture, les sept emplacements sont vides, la liste API est vide et les sept anciennes URL renvoient HTTP 404. |
+
+L’organisme et le compte temporaires ont été supprimés après la recette. Le test automatisé complémentaire est `ReferentialsTest::testOrganizationProfileAndPrivateDocument`. Il couvre notamment le contrôle d’accès, la conservation d’une pièce pendant une modification du profil et son retrait explicite.
+
+La migration `Version20261125000000` crée les tables de profil et de documents. La limite d’envoi prévue est de 5 Mo par pièce et de 40 Mo par requête multipart.

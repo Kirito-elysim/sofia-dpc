@@ -1,3 +1,4 @@
+import {Clock, Users, Video, Plus} from 'lucide-react'
 import { fromRow, toPayload } from './crudValues'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -103,13 +104,13 @@ export default function CrudPage({ title, path, fields, canWrite, canDelete = tr
 
   return (
     <>
-      <div className="mb-4 flex items-center">
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {canWrite && <button onClick={() => open('new')} className="ml-auto rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">+ Ajouter</button>}
+      <div className="page-heading">
+        {path==='time-slots'?<Clock/>:path==='users'?<Users/>:<Video/>}<h1 className="text-2xl font-bold">{title}</h1>
+        {canWrite && <button onClick={() => open('new')} className="page-add"><Plus/>Ajouter</button>}
       </div>
 
       {editing && (
-        <form onSubmit={submit} className="mb-6 grid grid-cols-2 gap-3 rounded-xl bg-white p-4 shadow-sm">
+        <form onSubmit={submit} className="sofia-card mb-6 grid grid-cols-2 gap-3 p-4">
           {fields.filter((f) => !f.tableOnly && (creating || !f.createOnly)).map((f) => (
             <label key={f.name} htmlFor={f.name} className={`flex flex-col gap-1 text-sm ${f.type === 'checkbox' ? 'flex-row items-center gap-2' : ''}`}>
               <span className="text-slate-600">{f.label}{f.required && ' *'}</span>
@@ -127,7 +128,7 @@ export default function CrudPage({ title, path, fields, canWrite, canDelete = tr
       )}
 
       {!editing && error && <p role="alert" className="mb-3 text-sm text-cancelled">{error}</p>}
-      <table className="w-full rounded-xl bg-white text-left text-sm shadow-sm">
+      <table className="sofia-card w-full text-left text-sm">
         <thead className="text-slate-500"><tr>{shown.map((f) => <th key={f.name} className="p-3">{f.label}</th>)}<th /></tr></thead>
         <tbody>
           {list.data?.map((r) => (

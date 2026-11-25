@@ -55,6 +55,60 @@ class ReferentialsTest extends WebTestCase
         return $this->call('POST', '/api/organizations', ['name' => 'SOFIA', 'code' => 'SOFIA', 'emailFrom' => 's@example.test', 'siret' => '12345678901234'])['id'];
     }
 
+    public function testOrganizationProfileAndPrivateDocument(): void
+    {
+        $this->loginAs('ADMIN');
+        $file=tempnam(sys_get_temp_dir(),'sofia-org-');
+        file_put_contents($file,"%PDF-1.4\n%%EOF\n");
+        try {
+            $this->client->request('POST','/api/organization-profiles',[
+                'name'=>'Organisme documentation','code'=>'DOC_TEST','emailFrom'=>'doc@example.test',
+                'active'=>'1','iban'=>'FR test','responsibleQuality'=>'Camille','isInstitution'=>'1',
+            ],['qualiopi'=>new \Symfony\Component\HttpFoundation\File\UploadedFile($file,'certificat.pdf',null,null,true)]);
+            self::assertResponseStatusCodeSame(201);
+            $id=json_decode($this->client->getResponse()->getContent(),true)['id'];
+            $url='/api/organization-profiles/'.$id;
+            $profile=$this->call('GET',$url);
+            self::assertSame('Camille',$profile['details']['responsibleQuality']);
+            self::assertSame('certificat.pdf',$profile['documents'][0]['name']);
+            $this->client->request('GET',$url.'/documents/qualiopi');
+            self::assertResponseIsSuccessful();
+            self::assertSame('application/pdf',$this->client->getResponse()->headers->get('Content-Type'));
+            self::assertArrayNotHasKey('isInstitution',$profile['details']);
+            self::assertContains($id,array_column($this->call('GET','/api/organizations'),'id'));
+            $this->client->request('POST',$url,[
+                'name'=>'Organisme documentation modifié','emailFrom'=>'doc@example.test','active'=>'1',
+                'responsibleQuality'=>'Lou','isInstitution'=>'1',
+            ]);
+            self::assertResponseIsSuccessful();
+            $updated=$this->call('GET',$url);
+            self::assertSame('Organisme documentation modifié',$updated['organization']['name']);
+            self::assertSame('Lou',$updated['details']['responsibleQuality']);
+            self::assertArrayNotHasKey('isInstitution',$updated['details']);
+            self::assertSame('certificat.pdf',$updated['documents'][0]['name']);
+            $this->loginAs('LECTURE');
+            $this->call('GET',$url.'/documents/qualiopi');
+            self::assertResponseStatusCodeSame(403);
+            $public=$this->call('GET','/api/organizations/'.$id);
+            self::assertArrayNotHasKey('iban',$public);
+            $this->loginAs('SUPER_ADMIN');
+            self::assertSame(filesize($file),(int)$profile['documents'][0]['size']);
+            $this->client->request('POST',$url,[
+                'name'=>'Organisme documentation modifié','emailFrom'=>'doc@example.test','active'=>'1',
+                'removedDocuments'=>['qualiopi'],
+            ]);
+            self::assertResponseIsSuccessful();
+            self::assertSame([],$this->call('GET',$url)['documents']);
+            $this->call('DELETE','/api/organizations/'.$id);
+            self::assertResponseStatusCodeSame(204);
+            self::assertNotContains($id,array_column($this->call('GET','/api/organizations'),'id'));
+            $this->call('GET',$url.'/documents/qualiopi');
+            self::assertResponseStatusCodeSame(404);
+        } finally {
+            unlink($file);
+        }
+    }
+
     public function testOrganizationCrudRolesValidationAndAudit(): void
     {
         $this->loginAs('LECTURE');
