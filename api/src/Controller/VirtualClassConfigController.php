@@ -16,7 +16,7 @@ final class VirtualClassConfigController extends AbstractController
     public function list(Connection $db): JsonResponse
     {
         $items=$db->fetchAllAssociative('SELECT * FROM virtual_class_config ORDER BY id');
-        $organizations=$db->fetchAllAssociative('SELECT id,name,virtual_class_config_id AS config FROM organization ORDER BY name');
+        $organizations=$db->fetchAllAssociative('SELECT id,name,virtual_class_config_id AS config FROM organization WHERE deleted_at IS NULL ORDER BY name');
         foreach ($items as &$item) {
             $item['policy']=json_decode($item['policy'],true,512,JSON_THROW_ON_ERROR);
             $item['hosts']=json_decode($item['hosts'],true,512,JSON_THROW_ON_ERROR);
@@ -47,7 +47,7 @@ final class VirtualClassConfigController extends AbstractController
                     }
                 }
                 foreach ($organizations as $organization) {
-                    if (!$db->fetchOne('SELECT id FROM organization WHERE id=?',[$organization])) {
+                    if (!$db->fetchOne('SELECT id FROM organization WHERE id=? AND deleted_at IS NULL',[$organization])) {
                         throw new \InvalidArgumentException('Organisme introuvable.');
                     }
                 }

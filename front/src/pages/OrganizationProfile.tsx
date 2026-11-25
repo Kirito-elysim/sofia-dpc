@@ -4,7 +4,7 @@ import {Link,useNavigate,useParams} from 'react-router-dom'
 import {Award,Building2,ChevronRight,Circle, CreditCard,FileText,Info,Mail,MapPin,MoreVertical,Save,Trash2} from 'lucide-react'
 import {api,toApiError} from '../api'
 import {OrganizationDocuments,type StoredDocument} from "./OrganizationDocuments"
-import {fields,options,preferences,types} from './organizationFields'
+import {establishmentNumber,fields,options,organizationColors,preferences,types} from './organizationFields'
 import './organization-profile.css'
 
 type Profile={organization:Record<string,string|boolean|null>;details:Record<string,string|boolean|null>;documents:StoredDocument[]}
@@ -12,13 +12,13 @@ const path='/settings/organizations'
 const tabs=['Informations générales','Coordonnées','Facturation','Communications','Documents']
 const icons=[Building2,MapPin,CreditCard,Mail,FileText]
 const groups=[
-  [['name','Nom de l’organisme'],['legalForm','Forme juridique'],['code','Code'],['andpcNumber','N° ANDPC'],['siret','SIRET'],['numberFormationDPC','N° de déclaration d’activité'],['active','Statut'],['color','Couleur d’identification']],
+  [['name','Nom de l’organisme'],['legalForm','Forme juridique'],['code','Code'],['andpcNumber','N° ANDPC'],['numberAPE','Code APE'],['siret',establishmentNumber.label],['numberFormationDPC','N° de déclaration d’activité'],['active','Statut'],['color','Couleur d’identification']],
   [...fields[1],['responsibleQuality','Responsable qualité']],
   [...fields[2],['tva','Taux de TVA (%)']],
   [...fields[3],['footer','Pied de page']],
 ]
-const choices:Record<string,string[][]>={active:[['1','Actif'],['0','Inactif']],color:[['blue','Bleu SOFIA'],['purple','Violet Phocea'],['gray','Gris']]}
-const limits:Record<string,number>={name:100,code:20,andpcNumber:30,emailFrom:180,smsSender:11,footer:1000}
+const choices:Record<string,string[][]>={active:[['1','Actif'],['0','Inactif']],color:organizationColors}
+const limits:Record<string,number>={name:100,code:20,andpcNumber:30,numberAPE:15,emailFrom:180,smsSender:11,footer:1000}
 
 export default function OrganizationProfile(){
   const {id}=useParams()
@@ -48,10 +48,10 @@ function Editor({id,profile}:{id:string;profile:Profile}){
   },onSuccess:async()=>{await Promise.all([['organizations'],['organization-summaries'],['organization-profile',id]].map(queryKey=>client.invalidateQueries({queryKey,refetchType:'none'})));navigate(path)}})
   const ActiveIcon=icons[tab],active=values.active==='1'
   function field([key,label]:string[]){
-    const required=['name','code','emailFrom','active','siret','andpcNumber'].includes(key)
+    const required=['name','code','emailFrom','active','andpcNumber'].includes(key)
     const props={name:key,value:values[key]??'',required,onChange:(e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>)=>update(key,key==='siret'?e.target.value.replace(/\s/g,''):e.target.value)}
     const list=choices[key]??options[key]?.map(v=>[v,v])
-    return <label key={key}><span>{label}{required&&<em> *</em>}</span>{list?<select {...props}>{!choices[key]&&<option value="">Sélectionner…</option>}{values[key]&&!list.some(([v])=>v===values[key])&&<option>{values[key]}</option>}{list.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:key==='footer'?<textarea {...props} maxLength={1000}/>:<input {...props} readOnly={key==='code'} maxLength={limits[key]} type={types[key]??(key==='tva'?'number':'text')} pattern={key==='siret'?'[0-9]{14}':key==='smsSender'?'[A-Za-z0-9]{1,11}':undefined} {...(key==='tva'?{min:0,max:100,step:0.01}:{})}/>}</label>
+    return <label key={key}><span>{label}{required&&<em> *</em>}</span>{list?<select {...props}>{!choices[key]&&<option value="">Sélectionner…</option>}{values[key]&&!list.some(([v])=>v===values[key])&&<option>{values[key]}</option>}{list.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:key==='footer'?<textarea {...props} maxLength={1000}/>:<input {...props} readOnly={key==='code'} maxLength={limits[key]} inputMode={key==='siret'?establishmentNumber.inputMode:undefined} type={types[key]??(key==='tva'?'number':'text')} pattern={key==='siret'?establishmentNumber.pattern:key==='smsSender'?'[A-Za-z0-9]{1,11}':undefined} {...(key==='tva'?{min:0,max:100,step:0.01}:{})}/>}</label>
   }
   return <section className="oe"><nav><Link to={path}>Organismes</Link><ChevronRight/> Modifier l’organisme</nav>
     <header><i><Building2/></i><div><h1>Modifier un organisme</h1><p>Mettez à jour les informations de l’organisme de formation.</p></div><b className={'oe-status '+(active?'on':'')}>●　{active?'Actif':'Inactif'}</b>
@@ -66,12 +66,12 @@ function Editor({id,profile}:{id:string;profile:Profile}){
     {i===0&&<details><summary>Informations complémentaires</summary><div className="oe-grid">{[['acronym','Sigle'],['numberAPE','Code APE / NAF']].map(field)}</div></details>}</section>)}
     </div>
     <aside><h2><i><Building2/></i>Aperçu de l’organisme</h2><div className="oe-logo">{(initialLogo&&!removed.includes('logo'))||files.logo?<img ref={logo} src={initialLogo} alt={values.name}/>:<strong>{values.name}</strong>}</div>
-    <dl>{[[Building2,'Code',values.code],[Award,'N° ANDPC',values.andpcNumber],[FileText,'SIRET',values.siret],[Circle,'Statut',active?'Actif':'Inactif']].map(([I,label,v])=>{const Icon=I as typeof Building2;return <div key={String(label)}><dt><Icon/>{String(label)}</dt><dd>{String(v||'—')}</dd></div>})}</dl></aside></div>
+    <dl>{[[Building2,'Code',values.code],[Award,'N° ANDPC',values.andpcNumber],[FileText,establishmentNumber.label,values.siret],[Circle,'Statut',active?'Actif':'Inactif']].map(([I,label,v])=>{const Icon=I as typeof Building2;return <div key={String(label)}><dt><Icon/>{String(label)}</dt><dd>{String(v||'—')}</dd></div>})}</dl></aside></div>
     {tab===4&&<OrganizationDocuments stored={profile.documents} files={files} removed={removed} root={'/api'+endpoint+'/documents'} onChange={(key,file)=>{
       setFiles(prev=>{const next={...prev};if(file)next[key]=file;else delete next[key];return next})
       setRemoved(prev=>file?prev.filter(k=>k!==key):[...new Set([...prev,key])])
     }}/>}
     {action.error&&<p role="alert">{action.error.message}</p>}
-    <footer><span><Info/>{tab===4?'Les documents marqués d’un * sont obligatoires. 5 Mo maximum par fichier.':'Les champs marqués d’un * sont obligatoires.'}</span><Link to={path}>Annuler</Link><button disabled={action.isPending}><Save/>{action.isPending?'Enregistrement…':'Enregistrer les modifications'}</button></footer></form>
-    <dialog ref={confirm}><h2>Supprimer {profile.organization.name} ?</h2><p>Cette suppression est définitive.</p>{action.error&&<p role="alert">{action.error.message}</p>}<button disabled={action.isPending} onClick={()=>confirm.current?.close()}>Annuler</button> <button className="oe-danger" disabled={action.isPending} onClick={()=>action.mutate(true)}>Supprimer</button></dialog></section>
+    <footer><span><Info/>{tab===4?'5 Mo maximum par fichier.':'Les champs marqués d’un * sont obligatoires.'}</span><Link to={path}>Annuler</Link><button disabled={action.isPending}><Save/>{action.isPending?'Enregistrement…':'Enregistrer les modifications'}</button></footer></form>
+    <dialog ref={confirm}><h2>Supprimer {profile.organization.name} ?</h2><p>L’organisme sera retiré de la liste et conservé dans l’historique.</p>{action.error&&<p role="alert">{action.error.message}</p>}<button disabled={action.isPending} onClick={()=>confirm.current?.close()}>Annuler</button> <button className="oe-danger" disabled={action.isPending} onClick={()=>action.mutate(true)}>Supprimer</button></dialog></section>
 }

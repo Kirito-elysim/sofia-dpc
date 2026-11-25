@@ -3,7 +3,6 @@
 namespace App\Tests\Functional;
 
 use App\Entity\AuditLog;
-use App\Entity\Training;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -99,14 +98,60 @@ class ReferentialsTest extends WebTestCase
             ]);
             self::assertResponseIsSuccessful();
             self::assertSame([],$this->call('GET',$url)['documents']);
+            $db = $this->em()->getConnection();
+            self::assertIsString($db->fetchOne("SELECT deleted_at FROM organization_document WHERE organization_id=? AND kind='qualiopi'", [$id]));
+            $this->call('GET',$url.'/documents/qualiopi');
+            self::assertResponseStatusCodeSame(404);
             $this->call('DELETE','/api/organizations/'.$id);
             self::assertResponseStatusCodeSame(204);
             self::assertNotContains($id,array_column($this->call('GET','/api/organizations'),'id'));
+            self::assertNotContains($id,array_map('intval',array_column($this->call('GET','/api/organization-summaries'),'id')));
+            self::assertIsString($db->fetchOne('SELECT deleted_at FROM organization WHERE id=?', [$id]));
+            $this->call('GET',$url);
+            self::assertResponseStatusCodeSame(404);
+            $this->call('GET','/api/organizations/'.$id);
+            self::assertResponseStatusCodeSame(404);
             $this->call('GET',$url.'/documents/qualiopi');
             self::assertResponseStatusCodeSame(404);
         } finally {
             unlink($file);
         }
+    }
+
+    public function testOrganizationDraftIsPrivateAndClosesOnlyAfterCreation(): void
+    {
+        $owner = $this->loginAs('ADMIN');
+        $base = '/api/organization-profiles';
+        $this->client->request('POST', "$base/drafts", ['step'=>'2', 'name'=>'Brouillon']);
+        self::assertResponseStatusCodeSame(201);
+        $id = json_decode($this->client->getResponse()->getContent(), true)['id'];
+        $url = "$base/drafts/$id";
+
+        $this->loginAs('SUPER_ADMIN');
+        self::assertSame([], $this->call('GET', "$base/drafts"));
+        $this->call('GET', $url);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', $url, ['step'=>'0', 'name'=>'Autre']);
+        self::assertResponseStatusCodeSame(404);
+        $this->call('DELETE', $url);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('POST', $base, [
+            'draftId'=>$id, 'name'=>'Autre', 'code'=>'OTHER', 'emailFrom'=>'other@example.test',
+        ]);
+        self::assertResponseStatusCodeSame(404);
+
+        $this->client->loginUser($this->em()->find(User::class, $owner->getId()));
+        self::assertSame('Brouillon', $this->call('GET', $url)['values']['name']);
+        $this->client->request('POST', $base, ['draftId'=>$id, 'name'=>'Brouillon']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(2, $this->call('GET', $url)['step']);
+        $this->client->request('POST', $base, [
+            'draftId'=>$id, 'name'=>'Brouillon finalisé', 'code'=>'DRAFT', 'emailFrom'=>'draft@example.test',
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $this->call('GET', $url);
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame([], $this->call('GET', "$base/drafts"));
     }
 
     public function testOrganizationCrudRolesValidationAndAudit(): void
@@ -377,13 +422,18 @@ class ReferentialsTest extends WebTestCase
         $this->call('POST', '/api/time-slots', ['label' => 'KO', 'startTime' => '13:00', 'endTime' => '09:00']);
         $this->assertResponseStatusCodeSame(422);
 
-        // Deleting a training detaches it from trainers; deleting an organization that still has trainings is refused.
         $this->call('DELETE', "/api/organizations/$org");
-        $this->assertResponseStatusCodeSame(409);
-        $this->call('DELETE', "/api/trainings/{$t['id']}");
         $this->assertResponseStatusCodeSame(204);
-        $this->assertCount(0, $this->call('GET', "/api/trainers/{$tr['id']}")['trainings']);
-        $this->assertSame(0, $this->em()->getRepository(Training::class)->count([]));
+        $this->assertCount(1, $this->call('GET', "/api/trainers/{$tr['id']}")['trainings']);
+
+        foreach (['trainings' => $t['id'], 'trainers' => $tr['id'], 'time-slots' => $slot['id']] as $resource => $id) {
+            $this->call('DELETE', "/api/$resource/$id");
+            $this->assertResponseStatusCodeSame(204);
+            $this->assertNotContains($id, array_column($this->call('GET', "/api/$resource"), 'id'));
+        }
+        $db = $this->em()->getConnection();
+        $this->assertIsString($db->fetchOne('SELECT deleted_at FROM training WHERE id=? AND organization_id=?', [$t['id'], $org]));
+        $this->assertSame('DELETE', $db->fetchOne("SELECT action FROM audit_log WHERE entity='Organization' AND entity_id=? ORDER BY id DESC LIMIT 1", [$org]));
     }
 
     public function testUsersAreSuperAdminOnlyHashedAndDeactivable(): void

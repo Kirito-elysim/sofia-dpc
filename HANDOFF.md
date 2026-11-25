@@ -4,6 +4,8 @@ Lire dans l'ordre : `CLAUDE.md` (règles métier et conventions, font foi), `doc
 `docs/doc-technique.md` (modèle de données, Zoom, notifications), `docs/maquettes/planning.png`, puis `SUIVI.md`
 (ce qui est fait / à faire). `HANDOFF.md` décrit l'état technique réel du dépôt, `SUIVI.md` l'avancement.
 
+Après chaque demande concernant Sofia, mettre à jour ce handoff avant de répondre. Consigner les changements ou décisions, les vérifications réellement effectuées et les points qui restent à traiter. Garder les identifiants et secrets hors du handoff.
+
 ## Reprise du 24 novembre 2026 — phase 1 en cours
 
 ### Livraison locale — annuaire, traçabilité et événements Zoom
@@ -196,3 +198,106 @@ Parcours vérifié dans Chromium à 1440 × 900, sur la pile Docker locale et la
 L’organisme et le compte temporaires ont été supprimés après la recette. Le test automatisé complémentaire est `ReferentialsTest::testOrganizationProfileAndPrivateDocument`. Il couvre notamment le contrôle d’accès, la conservation d’une pièce pendant une modification du profil et son retrait explicite.
 
 La migration `Version20261125000000` crée les tables de profil et de documents. La limite d’envoi prévue est de 5 Mo par pièce et de 40 Mo par requête multipart.
+
+### Suppression logique et confirmation dans Organismes — 25 novembre 2026
+
+- Dans **Organismes**, la confirmation s’ouvre au centre de l’écran. Le bouton **Supprimer** est rouge. Le titre de page et la confirmation utilisent des pictogrammes vectoriels Lucide. Un espace de 8 px sépare la corbeille du libellé du bouton.
+- La migration `Version20261125010000` ajoute `deleted_at` aux organismes, formations, formateurs, créneaux et documents d’organisme. Les fiches supprimées quittent les listes et restent en base avec leurs associations historiques. Une suppression de fiche est enregistrée dans le journal d’audit avec l’action `DELETE`.
+- Migration appliquée à la base locale. Sur une base de test isolée, les 16 tests PHPUnit passent avec 196 assertions. Le build et le lint frontend passent. Chromium a confirmé le centrage, les pictogrammes, l’espacement du bouton, l’annulation et la suppression d’un organisme fictif à 1440 × 900 et 1920 × 1080.
+- Les corrections sont dans le dépôt local. Le commit et le déploiement de ces corrections restent à faire.
+
+### Étape Identification de la création d’un organisme — 25 novembre 2026
+
+- La carte blanche occupe toute la colonne du formulaire. Le bouton Continuer est davantage en retrait du bord droit. Les listes déroulantes natives ont un chevron visible et le statut utilise un point coloré.
+- Le champ facultatif « SIREN ou SIRET » accepte 9 ou 14 chiffres en création et en édition. Le formulaire et l’API du profil retirent les espaces. La colonne et la clé API `siret` sont conservées et acceptent déjà cette longueur.
+- Chromium a vérifié la carte, le bouton et la validation à 1440 × 900, 1920 × 1080 et 390 × 844. Sur l’API Docker locale, les créations avec champ vide, SIREN et SIRET ont abouti. Un numéro de 10 chiffres a été refusé et la modification permet d’effacer la valeur. Les organismes fictifs ont été retirés par suppression logique.
+
+### Navigation de la création d’un organisme
+
+- En haut du formulaire, le lien « ← Organismes » revient à la liste. Sur grand écran, le panneau de droite affiche les cinq étapes et met en évidence l’étape en cours. Quand la largeur de la page de création est de 840 px ou moins, le panneau laisse place à un indicateur « Étape 1 sur 5 · Identification » qui suit la navigation.
+- Vérifié dans Chromium en local à 1440 × 900 et 1920 × 1080 pour le panneau latéral et à 390 × 844 pour l’indicateur compact. Les boutons Continuer et Retour ont fait avancer puis reculer l’indicateur. Le lien Organismes a ramené à la liste. Build et lint frontend réussis.
+
+### Ancien fonctionnement du brouillon local
+
+- Le bouton « Enregistrer en brouillon » sauvegarde sur demande l’étape, les champs et les pièces déjà jointes dans IndexedDB. Chaque utilisateur dispose d’un brouillon sur ce navigateur pour cette adresse Sofia. Un nouvel enregistrement remplace le précédent.
+- Au retour sur « Créer un organisme », Sofia restaure la dernière sauvegarde du même utilisateur sur le même navigateur. Le brouillon n’apparaît pas dans la liste des organismes et ne se synchronise pas avec un autre navigateur. Après une création réussie, Sofia efface le brouillon local.
+- Fonctionnement confirmé par lecture du code du formulaire et de son stockage. Aucun changement fonctionnel.
+
+### Statut Brouillon et hauteur du formulaire
+
+- « Enregistrer en brouillon » crée ou met à jour un brouillon dans la base PostgreSQL Docker de Sofia, puis revient à la liste des organismes. Le statut Brouillon, son filtre et le lien Reprendre sont visibles pour le compte propriétaire. Plusieurs brouillons peuvent être enregistrés. Le brouillon contient l’étape, les champs et les pièces et reste accessible depuis un autre navigateur avec le même compte. Un ancien brouillon local peut être repris puis enregistré côté serveur.
+- La migration `Version20261125020000` crée le stockage des brouillons. La création de l’organisme et la fermeture datée du brouillon sont effectuées dans la même transaction. Les brouillons ouverts restent hors des sélecteurs opérationnels. La documentation Supabase a servi de référence PostgreSQL. Sofia utilise sa base Docker existante.
+- Les cartes suivent la hauteur du contenu. Le pied du formulaire se trouve près des champs même lorsque le guide latéral est plus haut.
+- Recette Chromium locale à 1440 × 900 puis dans une nouvelle session à 390 × 844. Enregistrement incomplet, affichage du statut et filtre, reprise, restauration des sept pièces puis création finale vérifiés. Migration appliquée en local et sur la base de test isolée. Build et lint frontend réussis. PHPUnit passe avec 17 tests et 208 assertions, dont les contrôles entre comptes et la conservation du brouillon si la création échoue.
+
+### Description à transmettre à Codex
+
+Le brouillon est un état du parcours de création d’un organisme. Il conserve l’étape, les champs et les pièces dans PostgreSQL local via Docker. Le compte propriétaire le retrouve via le statut Brouillon dans la liste des organismes. Une création réussie ferme le brouillon dans la même transaction. La documentation Supabase a servi uniquement de référence PostgreSQL. Aucun compte ni service Supabase n’est nécessaire.
+
+### Aide du champ Code
+
+Dans l’étape Identification, une aide visible sous le champ Code explique qu’il s’agit de l’identifiant unique de l’organisme. Elle donne SOF en exemple et rappelle le format accepté. L’aide est associée au champ via `aria-describedby`. Build et lint frontend réussis.
+
+### Fond blanc, code APE et aides à la saisie
+
+Les cinq étapes de création utilisent des cartes blanches. Chaque champ et chaque emplacement de pièce affiche une courte description. Le code APE est facultatif dans Identification et disponible en édition. Le stockage existant du profil et des brouillons accepte déjà ce champ.
+
+Chromium à 1440 × 900 a vérifié le fond des cartes, les aides des champs et des sept pièces, ainsi que l’enregistrement du code APE dans le brouillon. La reprise du brouillon à 390 × 844 a confirmé l’affichage des aides des sept pièces. Build, lint et contrôle du diff réussis.
+
+### Champ Fonction dans Coordonnées
+
+Le champ « Fonction » désigne le poste de la personne renseignée juste avant dans « Responsable de l’organisme ». Le formulaire de création le demande actuellement comme champ obligatoire. Cette clarification ne change pas le formulaire.
+
+### Retrait du champ Fonction
+
+Le champ « Fonction » a été retiré de Coordonnées en création et en édition. La définition des champs est partagée entre les deux formulaires. Le responsable de l’organisme reste disponible. Build et lint frontend réussis.
+
+### Champ Conditions de paiement
+
+Dans Facturation, ce champ indique le délai de règlement convenu. Il est obligatoire dans l’assistant de création. Le profil et les brouillons le conservent. Le code actuel ne l’utilise pas pour calculer des échéances ou générer des factures. Vérification par lecture du code.
+
+### Retrait des conditions de paiement
+
+« Conditions de paiement » a été retiré de Facturation en création et en édition. Les autres champs servent à renseigner le profil et les brouillons. La recherche dans le code n’a trouvé aucun usage pour générer des factures, calculer la TVA, envoyer les factures ou lancer des paiements. Build et lint frontend réussis.
+
+### Préremplissage de la facturation
+
+À la création d’un organisme, Facturation reprend la raison sociale depuis Identification et l’adresse avec son complément, le code postal, la ville, l’e-mail et le téléphone depuis Coordonnées. Un champ suit la valeur d’origine jusqu’à sa modification manuelle. Les modifications manuelles sont conservées dans le brouillon. À la création finale, les valeurs affichées sont envoyées à l’API. TVA, IBAN et BIC restent à saisir selon les besoins du formulaire.
+
+Recette Chromium locale à 1440 × 900. Les six valeurs ont été reprises. Une modification de la ville dans Coordonnées a été répercutée et une adresse de facturation personnalisée a été conservée après retour et reprise du brouillon. Build et lint frontend réussis.
+
+### Facturation facultative
+
+Tous les champs de l’étape Facturation sont facultatifs à la création. Le préremplissage reste disponible et les valeurs peuvent être modifiées ou effacées. Le build et le lint frontend passent.
+
+### Avis sur l’étape Communications
+
+L’écran regroupe les réglages d’expédition, les contacts et les préférences. L’adresse d’envoi et l’expéditeur SMS sont exploités par les envois existants. L’aperçu affiche l’adresse de réponse. Les préférences et le contact de communication sont conservés dans le profil. Une simplification de l’étape ou le déplacement des réglages avancés vers la fiche organisme reste à décider.
+
+### Communications simplifiées à la création
+
+L’étape conserve l’e-mail d’envoi, prérempli depuis l’e-mail de contact et modifiable, et l’expéditeur SMS, facultatif. L’aperçu affiche les expéditeurs avec les valeurs du formulaire. L’e-mail de réponse, le contact dédié et les préférences ont été retirés de la création et restent disponibles en édition. Build et lint frontend réussis.
+
+### Aperçu des messages de l’organisme
+
+Dans Communications, l’aperçu présente un exemple d’e-mail avec son expéditeur, son objet et son corps, ainsi qu’un exemple de rappel SMS. Le nom de l’organisme et les expéditeurs se mettent à jour pendant la saisie. Build et lint frontend réussis.
+
+### Logo seul obligatoire dans l’assistant
+
+Le formulaire de création exige uniquement le logo à l’étape Documents. La signature, le cachet, le Kbis, le certificat Qualiopi, le RIB et le justificatif de déclaration d’activité sont facultatifs. Les libellés de création l’indiquent. La fiche en édition permet de gérer les pièces existantes sans afficher d’astérisques trompeurs.
+
+Dans Chromium, la création a été bloquée sans logo puis a réussi avec un logo seul. L’API a confirmé la présence d’une seule pièce. Build, lint et contrôle du diff réussis.
+
+### Couleur d’identification à la création
+
+Identification propose les mêmes couleurs que la fiche en édition. Bleu SOFIA est la valeur par défaut. Violet Phocea et Gris sont également disponibles. La couleur passe par le stockage existant du brouillon et du profil. Build et lint frontend réussis.
+
+### Sélecteur visuel de couleur
+
+Dans Identification à la création, trois boutons radio affichent la pastille et le nom de la couleur. Une coche et un contour distinguent le choix actif. Le sélecteur conserve la navigation clavier native. Build et lint frontend réussis.
+
+### Identité visuelle commune à la création et à l’édition
+
+L’étape Documents de création réutilise le bloc Identité visuelle de l’édition pour le logo, la signature et le cachet. Chaque carte affiche l’aperçu, le nom, le format, la taille et les actions d’ajout, de remplacement et de suppression. Les visuels acceptent le glisser-déposer. Le logo reste la seule pièce obligatoire à la création.
+
+Build et lint réussis. En Chromium, reprise mobile d’un brouillon avec sept pièces, décodage de l’aperçu du logo, retrait et blocage de la création, nouvel ajout et création avec les sept pièces vérifiés.

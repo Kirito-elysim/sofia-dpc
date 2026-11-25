@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Organization;
+use App\Entity\User;
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,9 +27,78 @@ final class OrganizationProfileController extends AbstractController
     ];
     private const KINDS = ['logo','signature','stamp','kbis','qualiopi','rib','declaration'];
 
+    #[Route('/drafts', methods: ['GET'])]
+    public function drafts(Connection $db): JsonResponse
+    {
+        return $this->json($db->fetchAllAssociative("SELECT id, fields->>'name' AS name, step, updated_at
+            FROM organization_draft WHERE owner_id=? AND closed_at IS NULL ORDER BY updated_at DESC, id DESC",
+            [$this->ownerId()]), 200, ['Cache-Control'=>'private, no-store']);
+    }
+
+    #[Route('/drafts/{id}', methods: ['GET'])]
+    public function draft(int $id, Connection $db): JsonResponse
+    {
+        $row = $db->fetchAssociative('SELECT step, fields, files FROM organization_draft
+            WHERE id=? AND owner_id=? AND closed_at IS NULL', [$id, $this->ownerId()]);
+        if (!$row) {
+            throw $this->createNotFoundException();
+        }
+
+        return $this->json([
+            'step'=>(int) $row['step'],
+            'values'=>json_decode($row['fields'], false, 512, JSON_THROW_ON_ERROR),
+            'files'=>json_decode($row['files'], false, 512, JSON_THROW_ON_ERROR),
+        ], 200, ['Cache-Control'=>'private, no-store']);
+    }
+
+    #[Route('/drafts', methods: ['POST'])]
+    #[Route('/drafts/{id}', methods: ['POST'])]
+    public function saveDraft(Request $request, Connection $db, ?int $id = null): JsonResponse
+    {
+        $step = filter_var($request->request->getString('step'), FILTER_VALIDATE_INT);
+        if ($step === false || $step < 0 || $step > 4) {
+            return $this->json(['detail'=>'Étape de brouillon invalide.'], 422);
+        }
+        $fields = array_intersect_key($request->request->all(), self::FIELDS + array_fill_keys(
+            ['name', 'code', 'emailFrom', 'smsSender', 'siret', 'andpcNumber', 'active', 'color', 'hasTva'], true));
+        foreach ($fields as $value) {
+            if (!is_string($value) || mb_strlen($value) > 1000) {
+                return $this->json(['detail'=>'Un champ du brouillon dépasse la longueur autorisée.'], 422);
+            }
+        }
+        $files = $this->readFiles($request);
+        if ($files instanceof JsonResponse) {
+            return $files;
+        }
+        $payload = [$step, json_encode((object) $fields, JSON_THROW_ON_ERROR), json_encode((object) $files, JSON_THROW_ON_ERROR)];
+        $owner = $this->ownerId();
+        $saved = $id === null
+            ? $db->fetchOne('INSERT INTO organization_draft(step,fields,files,owner_id) VALUES (?,?,?,?) RETURNING id', [...$payload, $owner])
+            : $db->fetchOne('UPDATE organization_draft SET step=?, fields=?, files=?, updated_at=CURRENT_TIMESTAMP
+                WHERE id=? AND owner_id=? AND closed_at IS NULL RETURNING id', [...$payload, $id, $owner]);
+        if ($saved === false) {
+            throw $this->createNotFoundException();
+        }
+
+        return $this->json(['id'=>(int) $saved], $id === null ? 201 : 200);
+    }
+
+    #[Route('/drafts/{id}', methods: ['DELETE'])]
+    public function discardDraft(int $id, Connection $db): Response
+    {
+        if (!self::closeDraft($db, $id, $this->ownerId())) {
+            throw $this->createNotFoundException();
+        }
+
+        return new Response(status: 204);
+    }
+
     #[Route('/{id}', requirements: ['id'=>'\d+'], methods: ['GET'])]
     public function detail(Organization $organization, EntityManagerInterface $em): JsonResponse
     {
+        if ($organization->getDeletedAt() !== null) {
+            throw $this->createNotFoundException();
+        }
         $db=$em->getConnection();
         $id=$organization->getId();
         $details=$db->fetchOne('SELECT details FROM organization_profile WHERE organization_id=?',[$id]);
@@ -36,7 +107,7 @@ final class OrganizationProfileController extends AbstractController
                 'smsSender'=>$organization->smsSender,'siret'=>$organization->siret,'andpcNumber'=>$organization->andpcNumber,
                 'active'=>$organization->active,'color'=>$organization->color],
             'details'=>$details ? (object) array_intersect_key(json_decode($details,true,512,JSON_THROW_ON_ERROR),self::FIELDS+['hasTva'=>true]) : new \stdClass(),
-            'documents'=>$db->fetchAllAssociative("SELECT kind,name,mime,octet_length(decode(content,'base64')) AS size FROM organization_document WHERE organization_id=? ORDER BY kind",[$id]),
+            'documents'=>$db->fetchAllAssociative("SELECT kind,name,mime,octet_length(decode(content,'base64')) AS size FROM organization_document WHERE organization_id=? AND deleted_at IS NULL ORDER BY kind",[$id]),
         ],200,['Cache-Control'=>'private, no-store']);
     }
 
@@ -45,7 +116,7 @@ final class OrganizationProfileController extends AbstractController
     public function save(Request $request, EntityManagerInterface $em, ValidatorInterface $validator, ?int $id=null): JsonResponse
     {
         $organization=$id===null ? null : $em->find(Organization::class,$id);
-        if ($id!==null && !$organization) {
+        if ($id!==null && (!$organization || $organization->getDeletedAt() !== null)) {
             throw $this->createNotFoundException();
         }
         if (!$request->request->has('name') && $request->headers->has('content-length')) {
@@ -73,6 +144,94 @@ final class OrganizationProfileController extends AbstractController
                 return $this->json(['detail'=>'Type de document inconnu.'],422);
             }
         }
+        $files = $this->readFiles($request);
+        if ($files instanceof JsonResponse) {
+            return $files;
+        }
+        $draftId = $id === null && $request->request->has('draftId') ? $request->request->getInt('draftId') : null;
+        $owner = $draftId !== null ? $this->ownerId() : null;
+
+        $creating=$organization===null;
+        $organization ??= new Organization('','','');
+        $organization->name=trim($request->request->getString('name'));
+        if ($creating) {
+            $organization->code=trim($request->request->getString('code'));
+        }
+        $organization->emailFrom=trim($request->request->getString('emailFrom'));
+        foreach (['smsSender','andpcNumber','color'] as $field) {
+            $organization->$field=trim($request->request->getString($field)) ?: null;
+        }
+        $establishmentNumber = preg_replace('/\s+/u', '', $request->request->getString('siret'));
+        $organization->siret = $establishmentNumber === '' ? null : $establishmentNumber;
+        $organization->active=$request->request->getBoolean('active');
+        $violations=$validator->validate($organization);
+        if (count($violations)) {
+            return $this->json(['detail'=>$violations[0]->getMessage()],422);
+        }
+
+        try {
+            $em->wrapInTransaction(function(EntityManagerInterface $em) use ($organization,$details,$files,$removed,$draftId,$owner): void {
+                if ($draftId !== null && !self::closeDraft($em->getConnection(), $draftId, (int) $owner)) {
+                    throw $this->createNotFoundException();
+                }
+                $em->persist($organization);
+                $em->flush();
+                $id=$organization->getId();
+                $db=$em->getConnection();
+                $db->executeStatement('INSERT INTO organization_profile(organization_id,details) VALUES (?,?) ON CONFLICT (organization_id) DO UPDATE SET details=organization_profile.details || excluded.details',
+                    [$id,json_encode($details,JSON_THROW_ON_ERROR)]);
+                foreach ($removed as $kind) {
+                    $db->executeStatement('UPDATE organization_document SET deleted_at=CURRENT_TIMESTAMP WHERE organization_id=? AND kind=? AND deleted_at IS NULL',[$id,$kind]);
+                }
+                foreach ($files as $kind=>$file) {
+                    $db->executeStatement('INSERT INTO organization_document(organization_id,kind,name,mime,content) VALUES (?,?,?,?,?)
+                        ON CONFLICT (organization_id,kind) DO UPDATE SET name=excluded.name,mime=excluded.mime,content=excluded.content,deleted_at=NULL',
+                        [$id,$kind,...$file]);
+                }
+            });
+        } catch (UniqueConstraintViolationException) {
+            return $this->json(['detail'=>'Ce code organisme est déjà utilisé.'],409);
+        }
+        return $this->json(['id'=>$organization->getId()],$creating?201:200);
+    }
+
+    #[Route('/{id}/documents/{kind}', requirements: ['id'=>'\d+'], methods: ['GET'])]
+    public function download(Organization $organization,string $kind,EntityManagerInterface $em): Response
+    {
+        if ($organization->getDeletedAt() !== null) {
+            throw $this->createNotFoundException();
+        }
+        $row=$em->getConnection()->fetchAssociative('SELECT name,mime,content FROM organization_document WHERE organization_id=? AND kind=? AND deleted_at IS NULL',
+            [$organization->getId(),$kind]);
+        if (!$row) {
+            throw $this->createNotFoundException();
+        }
+        $response=new Response(base64_decode($row['content']),200,['Content-Type'=>$row['mime'],
+            'Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);
+        $name=str_replace(['/',"\\","\r","\n"],'_',$row['name']);
+        $response->headers->set('Content-Disposition',$response->headers->makeDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT,$name,'document'));
+        return $response;
+    }
+
+    private function ownerId(): int
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User || $user->getId() === null) {
+            throw $this->createAccessDeniedException();
+        }
+
+        return $user->getId();
+    }
+
+    private static function closeDraft(Connection $db, int $id, int $owner): bool
+    {
+        return $db->executeStatement('UPDATE organization_draft SET closed_at=CURRENT_TIMESTAMP
+            WHERE id=? AND owner_id=? AND closed_at IS NULL', [$id, $owner]) === 1;
+    }
+
+    /** @return array<string, array{string, string, string}>|JsonResponse */
+    private function readFiles(Request $request): array|JsonResponse
+    {
         $files=[];
         foreach ($request->files->all() as $kind=>$file) {
             if (!in_array($kind,self::KINDS,true) || !$file instanceof UploadedFile || !$file->isValid() || !$file->getSize() || $file->getSize()>5*1024*1024) {
@@ -86,57 +245,6 @@ final class OrganizationProfileController extends AbstractController
             $files[$kind]=[mb_substr($file->getClientOriginalName(),0,255),$mime,base64_encode($file->getContent())];
         }
 
-        $creating=$organization===null;
-        $organization ??= new Organization('','','');
-        $organization->name=trim($request->request->getString('name'));
-        if ($creating) {
-            $organization->code=trim($request->request->getString('code'));
-        }
-        $organization->emailFrom=trim($request->request->getString('emailFrom'));
-        foreach (['smsSender','siret','andpcNumber','color'] as $field) {
-            $organization->$field=trim($request->request->getString($field)) ?: null;
-        }
-        $organization->active=$request->request->getBoolean('active');
-        $violations=$validator->validate($organization);
-        if (count($violations)) {
-            return $this->json(['detail'=>$violations[0]->getMessage()],422);
-        }
-
-        try {
-            $em->wrapInTransaction(static function(EntityManagerInterface $em) use ($organization,$details,$files,$removed): void {
-                $em->persist($organization);
-                $em->flush();
-                $id=$organization->getId();
-                $db=$em->getConnection();
-                $db->executeStatement('INSERT INTO organization_profile(organization_id,details) VALUES (?,?) ON CONFLICT (organization_id) DO UPDATE SET details=organization_profile.details || excluded.details',
-                    [$id,json_encode($details,JSON_THROW_ON_ERROR)]);
-                foreach ($removed as $kind) {
-                    $db->executeStatement('DELETE FROM organization_document WHERE organization_id=? AND kind=?',[$id,$kind]);
-                }
-                foreach ($files as $kind=>$file) {
-                    $db->executeStatement('INSERT INTO organization_document(organization_id,kind,name,mime,content) VALUES (?,?,?,?,?)
-                        ON CONFLICT (organization_id,kind) DO UPDATE SET name=excluded.name,mime=excluded.mime,content=excluded.content',
-                        [$id,$kind,...$file]);
-                }
-            });
-        } catch (UniqueConstraintViolationException) {
-            return $this->json(['detail'=>'Ce code organisme est déjà utilisé.'],409);
-        }
-        return $this->json(['id'=>$organization->getId()],$creating?201:200);
-    }
-
-    #[Route('/{id}/documents/{kind}', requirements: ['id'=>'\d+'], methods: ['GET'])]
-    public function download(Organization $organization,string $kind,EntityManagerInterface $em): Response
-    {
-        $row=$em->getConnection()->fetchAssociative('SELECT name,mime,content FROM organization_document WHERE organization_id=? AND kind=?',
-            [$organization->getId(),$kind]);
-        if (!$row) {
-            throw $this->createNotFoundException();
-        }
-        $response=new Response(base64_decode($row['content']),200,['Content-Type'=>$row['mime'],
-            'Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);
-        $name=str_replace(['/',"\\","\r","\n"],'_',$row['name']);
-        $response->headers->set('Content-Disposition',$response->headers->makeDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT,$name,'document'));
-        return $response;
+        return $files;
     }
 }

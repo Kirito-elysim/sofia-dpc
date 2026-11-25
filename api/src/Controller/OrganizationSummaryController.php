@@ -19,7 +19,7 @@ final class OrganizationSummaryController extends AbstractController
                 (SELECT COUNT(DISTINCT participant_id) FROM enrollment WHERE status='ACTIVE') AS global_learners,
                 p.details->>'address' AS address, p.details->>'zipCode' AS zip, p.details->>'city' AS city,
                 p.details->>'phone' AS phone, p.details->>'email' AS email,
-                EXISTS(SELECT 1 FROM organization_document d WHERE d.organization_id=o.id AND d.kind='logo') AS has_logo,
+                EXISTS(SELECT 1 FROM organization_document d WHERE d.organization_id=o.id AND d.kind='logo' AND d.deleted_at IS NULL) AS has_logo,
                 (SELECT MIN(at) FROM audit_log WHERE entity='Organization' AND entity_id=o.id AND action='CREATE') AS created,
                 a.at, COALESCE(u.name, a.user_email) AS author
             FROM organization o
@@ -36,6 +36,7 @@ final class OrganizationSummaryController extends AbstractController
                 ORDER BY entity_id, at DESC, id DESC
             ) a ON a.entity_id = o.id
             LEFT JOIN "user" u ON u.email = a.user_email
+            WHERE o.deleted_at IS NULL
             SQL));
     }
 }

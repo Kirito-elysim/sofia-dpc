@@ -1,50 +1,102 @@
-import {useEffect,useRef,useState} from 'react'
-import {Link,useNavigate} from 'react-router-dom'
+import {useEffect,useState} from 'react'
+import {Link,useNavigate,useSearchParams} from 'react-router-dom'
 import {useQueryClient} from '@tanstack/react-query'
-import {ArrowLeft,ArrowRight,Building2,Calculator,Check,ChevronRight,Eye,FileText,ImageIcon,Mail,Save,UploadCloud} from 'lucide-react'
-import {toApiError} from '../api'
+import {ArrowLeft,ArrowRight,Building2,Calculator,Check,ChevronDown,Eye,FileText,ImageIcon,Mail,MessageSquare,Save,UploadCloud} from 'lucide-react'
+import {api,toApiError} from '../api'
+import {OrganizationDocuments} from './OrganizationDocuments'
 import {organizationDraft} from './organizationDraft'
 import './organization-wizard.css'
 
 const path='/settings/organizations'
 const steps=['Identification','Coordonnées','Facturation','Communications','Documents']
-const descriptions=['Informations administratives (nom, code, SIRET, ANDPC…)','Adresse, responsables et contacts','Informations de facturation et bancaires','Paramètres des communications (e-mails, SMS…)','Logo, cachet et documents administratifs (Kbis, Qualiopi, RIB, NDA…)']
-const subtitles=['Renseignez les informations administratives de l’organisme.','Renseignez les coordonnées et contacts de l’organisme.','Renseignez les informations de facturation de l’organisme.','Paramétrez les informations et préférences de communication de l’organisme.']
+const descriptions=['Informations administratives (nom, code, SIREN ou SIRET, ANDPC…)','Adresse, responsables et contacts','Informations de facturation et bancaires','Expéditeurs des e-mails et SMS','Logo, cachet et documents administratifs (Kbis, Qualiopi, RIB, NDA…)']
+const subtitles=['Renseignez les informations administratives de l’organisme.','Renseignez les coordonnées et contacts de l’organisme.','Renseignez les informations de facturation de l’organisme.','Choisissez les expéditeurs des e-mails et des SMS.']
 const icons=[Building2,Building2,Calculator,Mail,ImageIcon]
-import {fields, optional, options, types, preferences, docs} from './organizationFields'
+import {establishmentNumber, fieldHelp, fields, optional, options, organizationColors, types, docs} from './organizationFields'
 
-function Attachment({name,label,image,file,onChange}:{name:string;label:string;image:boolean;file?:File;onChange:(file?:File)=>void}){
-  const preview=useRef<HTMLImageElement>(null)
-  useEffect(()=>{if(!file||!image||!preview.current)return;const url=URL.createObjectURL(file);preview.current.src=url;return ()=>URL.revokeObjectURL(url)},[file,image])
+function Attachment({name,label,file,onChange}:{name:string;label:string;file?:File;onChange:(file?:File)=>void}){
   return <div className={"ow-upload"+(file?" filled":"")} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(e.dataTransfer.files[0])onChange(e.dataTransfer.files[0])}}>
-    <strong>{!image&&<FileText/>}{label} <em>*</em></strong>{file&&image&&<img alt={label} ref={preview}/>}
-    <span>{file?<><Check/> {file.name}<small>{file.name.split('.').pop()?.toUpperCase()} · {Math.ceil(file.size/1024)} Ko</small></>:image?'Glissez-déposez une image':'PDF ou image · 5 Mo max.'}</span>{file&&!image&&<small className="ow-attached">✓ Joint</small>}
-    <label><UploadCloud/>{file?'Remplacer':'Sélectionner'}<input type="file" name={name} aria-label={label} accept={image?'image/png,image/jpeg,image/webp':'application/pdf,image/png,image/jpeg,image/webp'} onChange={e=>{if(e.target.files?.[0])onChange(e.target.files[0]);e.target.value=''}}/></label>
+    <strong><FileText/>{label}</strong>
+    <span>{file?<><Check/> {file.name}<small>{file.name.split('.').pop()?.toUpperCase()} · {Math.ceil(file.size/1024)} Ko</small></>:'PDF ou image · 5 Mo max.'}</span>{file&&<small className="ow-attached">✓ Joint</small>}
+    <label><UploadCloud/>{file?'Remplacer':'Sélectionner'}<input type="file" name={name} aria-label={label} aria-describedby={`ow-help-${name}`} accept="application/pdf,image/png,image/jpeg,image/webp" onChange={e=>{if(e.target.files?.[0])onChange(e.target.files[0]);e.target.value=''}}/></label>
     {file&&<button type="button" onClick={()=>onChange()}>Supprimer</button>}
+    <small id={`ow-help-${name}`} className="ow-field-help">{fieldHelp[name]}</small>
   </div>
 }
 
 export default function OrganizationWizard({user}:{user:string}){
-  const [step,setStep]=useState(0),[values,setValues]=useState<Record<string,string>>({active:'1',color:'blue',operational:'1',alerts:'1',news:'1'})
+  const [step,setStep]=useState(0),[values,setValues]=useState<Record<string,string>>({active:'1',color:'blue'})
   const [files,setFiles]=useState<Record<string,File>>({}),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[ready,setReady]=useState(false)
   const navigate=useNavigate(),client=useQueryClient(),Icon=icons[step]
-  useEffect(()=>{let live=true;organizationDraft(user).then(d=>{if(live&&d){setStep(d.step);setValues(d.values);setFiles(d.files);setMessage('Brouillon restauré.')}}).catch(()=>{if(live)setMessage('Le stockage local des brouillons est indisponible.')}).finally(()=>{if(live)setReady(true)});return ()=>{live=false}},[user])
+  const [params]=useSearchParams()
+  const draftId=params.get('draft')
+  useEffect(()=>{
+    let live=true
+    async function restore(){
+      setReady(false)
+      try {
+        const draft = draftId ? await api<{step:number;values:Record<string,string>;files:Record<string,[string,string,string]>}>('/organization-profiles/drafts/'+encodeURIComponent(draftId)) : undefined
+        const restored = draft ? {
+          ...draft,
+          files:Object.fromEntries(Object.entries(draft.files).map(([key,[name,type,data]])=>[
+            key,new File([Uint8Array.from(atob(data),character=>character.charCodeAt(0))],name,{type}),
+          ])),
+        } : await organizationDraft(user).catch(()=>undefined)
+        if(!live)return
+        setStep(restored?.step??0)
+        setValues({active:'1',color:'blue',...restored?.values})
+        setFiles(restored?.files??{})
+        setMessage(!draftId&&restored?'Brouillon local restauré. Enregistrez-le pour le retrouver dans la liste.':'')
+        setReady(true)
+      }catch(e){if(live)setMessage(e instanceof Error?e.message:'Impossible de charger le brouillon.')}
+    }
+    void restore()
+    return ()=>{live=false}
+  },[draftId,user])
   function update(key:string,v:string){setValues(prev=>({...prev,[key]:v}));setMessage('')}
   function move(n:number){setStep(n);setMessage('')}
-  async function draft(){setBusy(true);try{await organizationDraft(user,{step,values,files});setMessage('Brouillon enregistré sur ce navigateur.')}catch{setMessage('Impossible d’enregistrer le brouillon sur ce navigateur.')}finally{setBusy(false)}}
+  const billingDefaults: Record<string,string> = {
+    billingName: values.name ?? '',
+    billingAddress: [values.address, values.addressExtra].filter(Boolean).join(', '),
+    billingZip: values.zipCode ?? '',
+    billingCity: values.city ?? '',
+    billingEmail: values.email ?? '',
+    billingPhone: values.phone ?? '',
+  }
+  const formValues: Record<string,string> = { ...billingDefaults, emailFrom: values.email ?? '', ...values }
+  const stepFields = step === 3 ? fields[step].filter(([key]) => key === 'smsSender' || key === 'emailFrom') : fields[step]
+  const isRequired = (key: string) => key !== 'smsSender' && !optional.includes(key)
+  function formData(bodyValues: Record<string,string>){
+    const body = new FormData()
+    Object.entries(bodyValues).forEach(([key,value])=>body.append(key,value))
+    Object.entries(files).forEach(([key,file])=>body.append(key,file))
+    return body
+  }
+  async function draft(){
+    setBusy(true)
+    try {
+      const body = formData(values)
+      body.set('step',String(step))
+      const url = '/api/organization-profiles/drafts'+(draftId?'/'+encodeURIComponent(draftId):'')
+      const response = await fetch(url,{method:'POST',body})
+      if(!response.ok)throw toApiError(response.status,await response.json().catch(()=>null))
+      if(!draftId)await organizationDraft(user,null).catch(()=>undefined)
+      await client.invalidateQueries({queryKey:['organization-drafts']})
+      navigate(path)
+    }catch(e){setMessage(e instanceof Error?e.message:'Impossible d’enregistrer le brouillon.')}
+    finally{setBusy(false)}
+  }
   async function submit(){
     if(step<4){move(step+1);return}
-    const missing=docs.find(([key])=>!files[key])
-    if(missing){setMessage('Ajoutez le document obligatoire « '+missing[1]+' ».');return}
+    if(!files.logo){setMessage('Ajoutez le logo de l’organisme pour continuer.');return}
     setBusy(true)
     try{
-      const body=new FormData()
-      Object.entries(values).forEach(([key,value])=>body.append(key,value))
-      Object.entries(files).forEach(([key,file])=>body.append(key,file))
+      const body=formData(formValues)
+      if(draftId)body.set('draftId',draftId)
       const res=await fetch('/api/organization-profiles',{method:'POST',body})
       if(!res.ok)throw toApiError(res.status,await res.json().catch(()=>null))
-      await organizationDraft(user,null).catch(()=>undefined)
-      await Promise.all(['organizations','organization-summaries'].map(key=>client.invalidateQueries({queryKey:[key]})))
+      if(!draftId)await organizationDraft(user,null).catch(()=>undefined)
+      await Promise.all(['organizations','organization-summaries','organization-drafts'].map(key=>client.invalidateQueries({queryKey:[key]})))
       navigate(path)
     }catch(e){setMessage(e instanceof Error?e.message:'Échec de la création.')}finally{setBusy(false)}
   }
@@ -53,14 +105,52 @@ export default function OrganizationWizard({user}:{user:string}){
     if(file&&(!allowed.includes(file.type)||!file.size||file.size>5*1024*1024)){setMessage('Format non accepté ou fichier supérieur à 5 Mo.');return}
     setFiles(prev=>{const next={...prev};if(file)next[key]=file;else delete next[key];return next});setMessage('')
   }
-  return <section className="ow" data-step={step+1}><nav><Link to={path}>Organismes</Link><ChevronRight/>Créer un organisme</nav><header><i><Building2/></i><div><h1>Créer un organisme</h1><p>Ajoutez un nouvel organisme de formation (DPC) à la plateforme.</p></div></header>
-    <div className="ow-layout"><div className="ow-left"><ol className="ow-progress">{steps.map((s,i)=><li key={s} aria-current={i===step?'step':undefined} className={i<=step?'done':''}><button type="button" disabled={i>=step||busy} onClick={()=>move(i)}><b>{i<step?<Check/>:i+1}</b>{s}</button></li>)}</ol>
+  return <section className="ow" data-step={step+1}><nav><Link to={path}><ArrowLeft aria-hidden="true"/>Organismes</Link></nav><header><i><Building2/></i><div><h1>{draftId?'Reprendre un organisme':'Créer un organisme'}</h1>{draftId&&<span className="org-draft-status">Brouillon</span>}<p>Ajoutez un nouvel organisme de formation (DPC) à la plateforme.</p></div></header>
+    <div className="ow-layout"><div className="ow-left"><p className="ow-step-summary" aria-live="polite">Étape {step+1} sur {steps.length} · {steps[step]}</p>
     <form onSubmit={e=>{e.preventDefault();void submit()}}><fieldset disabled={busy||!ready}>
-    {step<4?<section className="ow-panel"><header><i><Icon/></i><div><h2>{steps[step]}</h2><p>{subtitles[step]}</p></div></header><div className={step===3?'ow-communications':''}><div><div className="ow-fields">{fields[step].map(([key,label,hint])=><label key={key} className={['name','url','smsSender'].includes(key)?'wide':''}><span>{label} {!optional.includes(key)&&<em>*</em>}</span>
-    {options[key]||key==='active'?<select required={!optional.includes(key)} value={values[key]??''} onChange={e=>update(key,e.target.value)}>{key==='active'?<><option value="1">●　Actif</option><option value="0">○　Inactif</option></>:<><option value="">Sélectionner…</option>{options[key].map(o=><option key={o}>{o}</option>)}</>}</select>:<input name={key} type={types[key]??'text'} required={!optional.includes(key)} placeholder={hint} value={values[key]??''} onChange={e=>update(key,key==='siret'?e.target.value.replace(/\s/g,''):e.target.value)} pattern={({siret:'[0-9]{14}',code:'[A-Z0-9_]{2,20}',smsSender:'[A-Za-z0-9]{1,11}'} as Record<string,string>)[key]}/>}</label>)}</div>
-    {step===3&&<div className="ow-prefs">{preferences.map(([key,label,desc])=><label key={key}><input type="checkbox" checked={values[key]==='1'} onChange={e=>update(key,e.target.checked?'1':'0')}/><span><strong>{label}</strong><small>{desc}</small></span></label>)}</div>}</div>
-    {step===3&&<aside className="ow-preview"><h3><Eye/> Aperçu des communications</h3><p>Voici comment vos informations apparaîtront dans les messages.</p><h4>SMS</h4><blockquote>{values.smsSender||'Expéditeur'} · Votre session DPC est confirmée.</blockquote><h4>E-mail</h4><blockquote>De : {values.emailFrom||'—'}<br/>Répondre à : {values.replyEmail||'—'}<hr/>Confirmation de votre session DPC</blockquote></aside>}</div></section>:
-    [true,false].map(image=><section className="ow-panel" key={String(image)}><header><i>{image?<ImageIcon/>:<FileText/>}</i><div><h2>{image?'Identité visuelle':'Documents administratifs'}</h2><p>{image?'Ajoutez le logo, la signature et le cachet de l’organisme.':'Ajoutez les documents réglementaires de l’organisme.'}</p></div></header><div className={image?'ow-images':'ow-docs'}>{docs.filter((_,i)=>(i<3)===image).map(([key,label])=><Attachment key={key} name={key} label={label} image={image} file={files[key]} onChange={file=>upload(key,image,file)}/>)}</div></section>)}
+    {step<4?<section className="ow-panel"><header><i><Icon/></i><div><h2>{steps[step]}</h2><p>{subtitles[step]}</p></div></header><div className={step===3?'ow-communications':''}><div><div className="ow-fields">{stepFields.map(([key,label,hint])=>key==='color'?
+      <div key={key} className="ow-color-field" role="group" aria-labelledby="ow-color-label" aria-describedby="ow-color-help">
+        <span id="ow-color-label">{label}</span>
+        <div className="ow-color-options">
+          {organizationColors.map(([value,name])=><label key={value} data-color={value}>
+            <input type="radio" name="color" value={value} checked={values.color===value} onChange={()=>update('color',value)}/>
+            <span className="ow-color-swatch" aria-hidden="true">{values.color===value&&<Check/>}</span>
+            <span>{name}</span>
+          </label>)}
+        </div>
+        <small id="ow-color-help" className="ow-field-help">{fieldHelp.color}</small>
+      </div>:<label key={key} className={['name','url','smsSender'].includes(key)?'wide':''}><span id={`ow-label-${key}`}>{label} {isRequired(key)&&<em>*</em>}</span>
+    {options[key]||key==='active'?
+      <div className="ow-select" data-status={key==='active'?values.active:undefined}>
+        <select name={key} aria-labelledby={`ow-label-${key}`} aria-describedby={`ow-help-${key}`} required={isRequired(key)} value={formValues[key]??''} onChange={e=>update(key,e.target.value)}>
+          {key==='active'?<><option value="1">Actif</option><option value="0">Inactif</option></>:<><option value="">Sélectionner…</option>{options[key].map(o=><option key={o}>{o}</option>)}</>}
+        </select>
+        <ChevronDown aria-hidden="true"/>
+      </div>:
+      <input name={key} aria-labelledby={`ow-label-${key}`} aria-describedby={`ow-help-${key}`} type={types[key]??'text'} required={isRequired(key)} placeholder={hint} value={formValues[key]??''} onChange={e=>update(key,key==='siret'?e.target.value.replace(/\s/g,''):e.target.value)}
+        {...(key==='siret'?{pattern:establishmentNumber.pattern,inputMode:establishmentNumber.inputMode,title:establishmentNumber.hint}:{maxLength:key==='numberAPE'?15:undefined,pattern:({code:'[A-Z0-9_]{2,20}',smsSender:'[A-Za-z0-9]{1,11}'} as Record<string,string>)[key]})}/>}<small id={`ow-help-${key}`} className="ow-field-help">{fieldHelp[key]}</small></label>)}</div>
+    </div>
+    {step===3&&<aside className="ow-preview" aria-label="Aperçu des messages">
+      <h3><Eye aria-hidden="true"/> Aperçu des messages</h3>
+      <section className="ow-message">
+        <h4><Mail aria-hidden="true"/> E-mail</h4>
+        <dl>
+          <div><dt>De</dt><dd><strong>{values.name || 'Organisme'}</strong>{formValues.emailFrom && <span>{formValues.emailFrom}</span>}</dd></div>
+          <div><dt>Objet</dt><dd>{values.name || 'Organisme'} — Confirmation de votre inscription</dd></div>
+        </dl>
+        <div className="ow-email-body"><p>Bonjour Camille,</p><p>Votre inscription à la classe virtuelle est confirmée.</p><p>L’équipe {values.name || 'de l’organisme'}</p></div>
+      </section>
+      <section className="ow-message">
+        <h4><MessageSquare aria-hidden="true"/> SMS</h4>
+        <div className="ow-sms-body"><strong>{values.smsSender || 'Expéditeur par défaut'}</strong><p>Bonjour Camille, votre classe virtuelle commence dans 5 minutes.</p></div>
+      </section>
+    </aside>}</div></section>:
+    <>
+      <OrganizationDocuments visualOnly stored={[]} removed={[]} root="" files={files} onChange={(key,file)=>upload(key,true,file)}/>
+      <section className="ow-panel"><header><i><FileText/></i><div><h2>Documents administratifs</h2><p>Ces pièces sont facultatives et peuvent être ajoutées après la création.</p></div></header>
+        <div className="ow-docs">{docs.slice(3).map(([key,label])=><Attachment key={key} name={key} label={label} file={files[key]} onChange={file=>upload(key,false,file)}/>)}</div>
+      </section>
+    </>}
     {message&&<p role="status">{message}</p>}<footer>{step?<button type="button" onClick={()=>move(step-1)}><ArrowLeft/>Retour</button>:<Link to={path}>Annuler</Link>}<button type="button" onClick={draft}><Save/>Enregistrer en brouillon</button><button type="submit">{step===4?'Créer l’organisme':'Continuer'}{step===4?<Check/>:<ArrowRight/>}</button></footer></fieldset></form></div>
     <aside className="ow-guide"><img src="/organizations/creation-building.png" alt=""/><h2>Création d’un organisme</h2><p>Complétez les 5 étapes pour ajouter un nouvel organisme.</p><ol>{steps.map((s,i)=><li key={s} aria-current={i===step?'step':undefined}><b>{i+1}</b><div><strong>{s}</strong><small>{descriptions[i]}</small></div></li>)}</ol></aside></div></section>
 }

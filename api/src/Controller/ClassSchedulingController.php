@@ -28,7 +28,7 @@ final class ClassSchedulingController extends AbstractController
         $training = $em->find(Training::class, $this->positiveId($input['trainingId'] ?? null));
         $day = is_string($input['date'] ?? null) ? $input['date'] : '';
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $day, new \DateTimeZone('Europe/Paris'));
-        if (!$date || $date->format('Y-m-d') !== $day || !$training?->active || !$training->organization->active) {
+        if (!$date || $date->format('Y-m-d') !== $day || !$training?->active || !$training->organization->active || $training->getDeletedAt() || $training->organization->getDeletedAt()) {
             throw new UnprocessableEntityHttpException('Date ou formation invalide.');
         }
         $class = new VirtualClass($training, $date, $this->positiveId($input['capacity'] ?? $training->defaultCapacity));
@@ -72,7 +72,7 @@ final class ClassSchedulingController extends AbstractController
                 $slotId = $this->positiveId($row['timeSlotId'] ?? null);
                 $time = $em->find(TimeSlot::class, $slotId);
                 $trainer = $em->find(Trainer::class, $this->positiveId($row['trainerId'] ?? null));
-                if (isset($seen[$slotId]) || !$time || !$time->getDurationMin() || !$trainer?->active || !$trainer->getTrainings()->contains($training)) {
+                if (isset($seen[$slotId]) || !$time || !$time->getDurationMin() || $time->getDeletedAt() || !$trainer?->active || $trainer->getDeletedAt() || !$trainer->getTrainings()->contains($training)) {
                     throw new UnprocessableEntityHttpException('Créneau répété, horaire invalide ou formateur non habilité.');
                 }
                 $seen[$slotId] = true;

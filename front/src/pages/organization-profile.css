@@ -19,7 +19,8 @@
 .ed-visual .ed-content,.ed-row{border:1px solid var(--card-border);border-radius:10px;background:#ffffffac}
 .ed-visual .ed-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:6px 10px;padding:9px}
 .ed-image{display:grid;place-items:center;height:clamp(88px,7.4vw,128px);grid-row:span 2;border-radius:9px;border:1px solid var(--card-border);background:white;color:#9baec7}.ed-image img{height:100%;width:100%;object-fit:contain;min-height:0;padding:5px}
-.ed-meta{min-width:0;align-items:flex-start;font-size:13px;overflow-wrap:anywhere}.ed-meta svg{width:16px;color:green}.ed-visual .ed-actions{align-items:flex-start;flex-direction:column;gap:5px}.oe .ed-actions :is(a,button){font-size:12px;padding:5px 9px;border-radius:7px;white-space:nowrap}.ed-actions svg{width:15px;height:15px}
-.ed-actions a{background:#e7f8e8;color:#126324}.oe button.ed-remove{border-color:#f1b4bd;color:#c72539}.ed-documents .ed-hint{grid-column:1/-1;display:flex;color:#506184}
+.ed-meta{min-width:0;align-items:flex-start;font-size:13px;overflow-wrap:anywhere}.ed-meta svg{width:16px;color:green}.ed-visual .ed-actions{align-items:flex-start;flex-direction:column;gap:5px}.ed-documents .ed-actions :is(a,button){font-size:12px;padding:5px 9px;border-radius:7px;white-space:nowrap}.ed-actions svg{width:15px;height:15px}
+.ed-actions a{background:#e7f8e8;color:#126324}.ed-documents button.ed-remove{border-color:#f1b4bd;color:#c72539}.ed-documents .ed-hint{grid-column:1/-1;display:flex;color:#506184}
 .ed-rows{display:grid;gap:3px}.ed-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) auto;align-items:center;padding:6px 10px;gap:10px}.ed-row .ed-content{display:contents}.ed-row .ed-label{margin:0}.ed-row .ed-label>svg{color:#d12b42}.ed-row [role=alert]{grid-column:1/-1}
 @container(max-width:870px){.ed-images{grid-template-columns:1fr}.ed-visual .ed-content{grid-template-columns:100px 1fr auto}.ed-image{grid-row:auto}.ed-row{grid-template-columns:1fr 1fr}.ed-row .ed-actions{grid-column:1/-1;flex-wrap:wrap}}
+.ed-file-help{margin-top:5px;color:#46658f}

@@ -4,6 +4,7 @@ namespace App\EventListener;
 
 use App\Entity\AuditLog;
 use App\Entity\MessageLog;
+use App\Entity\SoftDeletable;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
@@ -35,7 +36,8 @@ final class AuditListener
         }
         foreach ($uow->getScheduledEntityUpdates() as $e) {
             if ($this->audited($e) && $diff = $this->diff($uow->getEntityChangeSet($e), false)) {
-                $this->pending[] = ['UPDATE', $e, null, $diff];
+                $action = $e instanceof SoftDeletable && isset($diff['deletedAt']) ? 'DELETE' : 'UPDATE';
+                $this->pending[] = [$action, $e, null, $diff];
             }
         }
         foreach ($uow->getScheduledEntityDeletions() as $e) {

@@ -20,7 +20,7 @@ final class ZoomOAuthController extends AbstractController
         return $this->json([
             'app'=>$db->fetchAssociative('SELECT client_id AS "clientId",redirect_uri AS "redirectUri" FROM zoom_oauth_app WHERE id=1') ?: null,
             'connections'=>$db->fetchAllAssociative('SELECT id,account_id AS "accountId" FROM zoom_oauth_connection ORDER BY id'),
-            'organizations'=>$db->fetchAllAssociative('SELECT id,name FROM organization WHERE active ORDER BY name'),
+            'organizations'=>$db->fetchAllAssociative('SELECT id,name FROM organization WHERE active AND deleted_at IS NULL ORDER BY name'),
         ]);
     }
 
@@ -133,7 +133,7 @@ final class ZoomOAuthController extends AbstractController
         try {
             $db->transactional(function(Connection $db) use ($id,$organization,$users): void {
                 $db->executeQuery("SELECT pg_advisory_xact_lock(hashtext('virtual-class-config'))");
-                $org=$db->fetchAssociative('SELECT name,virtual_class_config_id FROM organization WHERE id=? AND active FOR UPDATE',[$organization]);
+                $org=$db->fetchAssociative('SELECT name,virtual_class_config_id FROM organization WHERE id=? AND active AND deleted_at IS NULL FOR UPDATE',[$organization]);
                 if (!$org) {
                     throw new \DomainException('Organisme actif introuvable.');
                 }

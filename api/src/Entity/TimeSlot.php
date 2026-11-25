@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\State\SoftDeleteProcessor;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -20,13 +21,13 @@ use Symfony\Component\Validator\Constraints as Assert;
         new GetCollection(), new Get(),
         new Post(security: "is_granted('ROLE_ADMIN')"),
         new Patch(security: "is_granted('ROLE_ADMIN')"),
-        new Delete(security: "is_granted('ROLE_ADMIN')"),
+        new Delete(security: "is_granted('ROLE_ADMIN')", processor: SoftDeleteProcessor::class),
     ],
     security: "is_granted('ROLE_LECTURE')",
     normalizationContext: ['groups' => ['read']],
     denormalizationContext: ['groups' => ['write']],
 )]
-class TimeSlot
+class TimeSlot extends SoftDeletable
 {
     private const HHMM = '/^([01][0-9]|2[0-3]):[0-5][0-9]$/';
 

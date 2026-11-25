@@ -29,7 +29,7 @@ body { @apply bg-page text-ink; }
 #root :is(.sofia-card, .db-panel, .panels section, .oa-filters, .oa-table,
   .oa-empty, .oa-notes section, .ad-panel, .ad-table, .msg-cards > section,
   .msg-preview, .msg-trigger, .vl-sum, .vc-panel, .od-cards article, .oe-tabs,
-  .oe-panel, .oe aside, .oe footer, .ow-progress, .ow-guide,
+  .oe-panel, .oe aside, .oe footer, .ow-guide,
   .ow:not([data-step="5"]) fieldset, .ow[data-step="5"] .ow-panel,
   .ow[data-step="5"] footer, .login-card) {
   background: var(--card-background);
