@@ -517,3 +517,4 @@ Restes ouverts : en production l’envoi est refusé tant que `MAILER_DSN` n’e
 ### Commit — 25 novembre 2026
 
 - À la demande de l’utilisateur, tout le travail en attente (reprise de Codex et sessions du 25 novembre) est commité en un seul commit sur la branche `feat/comptes-roles-acces-formateur`. Ni poussé, ni fusionné dans `main`, ni déployé. Les mentions « non commité » plus haut sont closes par ce commit.
+- Fusionné ensuite dans `main` (avance rapide) à la demande de l’utilisateur. Non poussé et non déployé.
