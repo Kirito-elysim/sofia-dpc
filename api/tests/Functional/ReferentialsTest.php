@@ -24,9 +24,9 @@ class ReferentialsTest extends WebTestCase
         return static::getContainer()->get(EntityManagerInterface::class);
     }
 
-    private function loginAs(string $role): User
+    private function loginAs(string $role, ?string $email = null): User
     {
-        $u = new User("$role@example.test", 'Test', 'x', ["ROLE_$role"]);
+        $u = new User($email ?? "$role@example.test", 'Test', 'x', ["ROLE_$role"]);
         $this->em()->persist($u);
         $this->em()->flush();
         $this->client->loginUser($u);
@@ -56,7 +56,7 @@ class ReferentialsTest extends WebTestCase
 
     public function testOrganizationProfileAndPrivateDocument(): void
     {
-        $this->loginAs('ADMIN');
+        $this->loginAs('SUPER_ADMIN', 'owner@example.test');
         $file=tempnam(sys_get_temp_dir(),'sofia-org-');
         file_put_contents($file,"%PDF-1.4\n%%EOF\n");
         try {
@@ -85,7 +85,9 @@ class ReferentialsTest extends WebTestCase
             self::assertSame('Lou',$updated['details']['responsibleQuality']);
             self::assertArrayNotHasKey('isInstitution',$updated['details']);
             self::assertSame('certificat.pdf',$updated['documents'][0]['name']);
-            $this->loginAs('LECTURE');
+            $reader = $this->loginAs('LECTURE');
+            $reader->addOrganization($this->em()->find(\App\Entity\Organization::class, $id));
+            $this->em()->flush();
             $this->call('GET',$url.'/documents/qualiopi');
             self::assertResponseStatusCodeSame(403);
             $public=$this->call('GET','/api/organizations/'.$id);
@@ -120,7 +122,7 @@ class ReferentialsTest extends WebTestCase
 
     public function testOrganizationDraftIsPrivateAndClosesOnlyAfterCreation(): void
     {
-        $owner = $this->loginAs('ADMIN');
+        $owner = $this->loginAs('SUPER_ADMIN', 'owner@example.test');
         $base = '/api/organization-profiles';
         $this->client->request('POST', "$base/drafts", ['step'=>'2', 'name'=>'Brouillon']);
         self::assertResponseStatusCodeSame(201);
@@ -160,7 +162,7 @@ class ReferentialsTest extends WebTestCase
         $this->call('POST', '/api/organizations', ['name' => 'X', 'code' => 'X1', 'emailFrom' => 'x@example.test']);
         $this->assertResponseStatusCodeSame(403);
 
-        $this->loginAs('ADMIN');
+        $this->loginAs('SUPER_ADMIN');
         $id = $this->org();
         $this->assertResponseStatusCodeSame(201);
 
@@ -391,7 +393,7 @@ class ReferentialsTest extends WebTestCase
 
     public function testMessageTemplateEditingAndPermissions(): void
     {
-        $this->loginAs('ADMIN');
+        $this->loginAs('SUPER_ADMIN');
         $fields = ['name'=>'Relance test','channel'=>'SMS','organization'=>'Tous','triggerLabel'=>'J-3','body'=>'Bonjour {prenom}'];
         $row = $this->call('POST', '/api/message-templates', $fields);
         $this->assertResponseStatusCodeSame(201);
@@ -401,14 +403,52 @@ class ReferentialsTest extends WebTestCase
         $this->assertFalse($this->call('PATCH', $url, ['active'=>false])['active']);
         $this->loginAs('LECTURE');
         $this->call('GET', '/api/message-templates');
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(403);
         $this->call('PATCH', $url, ['active'=>true]);
         $this->assertResponseStatusCodeSame(403);
     }
 
+    public function testCustomRoleUsesTheSamePermissionsAcrossAssignedOrganizations(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $first = $this->org();
+        $second = $this->call('POST', '/api/organizations', ['name' => 'PHOCEA', 'code' => 'PHO', 'emailFrom' => 'p@example.test'])['id'];
+        $outside = $this->call('POST', '/api/organizations', ['name' => 'Autre', 'code' => 'OTHER', 'emailFrom' => 'o@example.test'])['id'];
+        $role = $this->call('POST', '/api/custom-roles', ['name' => 'Coordinateur DPC', 'permissions' => ['EDIT_TRAININGS']]);
+        $account = $this->call('POST', '/api/users', [
+            'name' => 'Coordination',
+            'email' => 'coordinateur@example.test',
+            'plainPassword' => 'mot-de-passe-temporaire',
+            'role' => 'ROLE_LECTURE',
+            'customRoleId' => $role['id'],
+            'organizations' => ["/api/organizations/$first", "/api/organizations/$second"],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('custom:'.$role['id'], $account['assignedRole']);
+
+        $user = $this->em()->find(User::class, $account['id']);
+        $user->mustChangePassword = false;
+        $this->em()->flush();
+        $this->client->loginUser($user);
+
+        self::assertEqualsCanonicalizing([$first, $second], array_column($this->call('GET', '/api/organizations'), 'id'));
+        foreach ([$first, $second] as $organization) {
+            $this->call('POST', '/api/trainings', ['title' => 'Formation', 'organization' => "/api/organizations/$organization"]);
+            self::assertResponseStatusCodeSame(201);
+        }
+        $this->call('POST', '/api/trainings', ['title' => 'Formation hors périmètre', 'organization' => "/api/organizations/$outside"]);
+        self::assertResponseStatusCodeSame(400);
+        self::assertCount(2, $this->call('GET', '/api/trainings'));
+
+        $this->call('GET', '/api/planning');
+        self::assertResponseStatusCodeSame(403);
+        $this->call('GET', '/api/custom-roles');
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testTrainingTrainerTimeSlot(): void
     {
-        $this->loginAs('ADMIN');
+        $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
         $t = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation fictive', 'defaultCapacity' => 20]);
         $this->assertResponseStatusCodeSame(201);
@@ -478,10 +518,8 @@ class ReferentialsTest extends WebTestCase
         $mine = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'a@example.test']);
         $other = $this->call('POST', '/api/trainers', ['firstName' => 'C', 'lastName' => 'D', 'email' => 'c@example.test']);
 
-        // A FORMATEUR account needs exactly one trainer, and a staff account none.
+        // A FORMATEUR account needs a trainer.
         $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_FORMATEUR', 'plainPassword' => 'un-mot-de-passe-long']);
-        $this->assertResponseStatusCodeSame(422);
-        $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_LECTURE', 'trainer' => "/api/trainers/{$mine['id']}", 'plainPassword' => 'un-mot-de-passe-long']);
         $this->assertResponseStatusCodeSame(422);
         $u = $this->call('POST', '/api/users', ['email' => 'f@example.test', 'name' => 'F', 'role' => 'ROLE_FORMATEUR', 'trainer' => "/api/trainers/{$mine['id']}", 'plainPassword' => 'un-mot-de-passe-long']);
         $this->assertResponseStatusCodeSame(201);
@@ -501,7 +539,10 @@ class ReferentialsTest extends WebTestCase
         $em->persist(new \App\Entity\ClassSlot($others, $slot, $em->getRepository(\App\Entity\Trainer::class)->find($other['id'])));
         $em->flush();
 
-        $this->client->loginUser($em->getRepository(User::class)->find($u['id']));
+        $trainerAccount = $em->getRepository(User::class)->find($u['id']);
+        $trainerAccount->mustChangePassword = false;
+        $em->flush();
+        $this->client->loginUser($trainerAccount);
         $rows = $this->call('GET', '/api/me/classes');
         $this->assertResponseIsSuccessful();
         $this->assertCount(1, $rows);
@@ -511,6 +552,134 @@ class ReferentialsTest extends WebTestCase
 
         $this->loginAs('SUIVI');
         $this->call('GET', '/api/me/classes');
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testTrainerAccessIsManagedFromTheTrainerSheet(): void
+    {
+        $owner = $this->loginAs('SUPER_ADMIN');
+        $mine = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test']);
+        $this->assertSame('created', $this->call('POST', "/api/trainers/{$mine['id']}/access")['result']);
+        $this->assertEmailCount(1);
+        $account = fn () => $this->em()->getRepository(User::class)->findOneBy(['trainer' => $mine['id']]);
+        $this->assertSame('ROLE_FORMATEUR', $account()->getRole());
+        $this->assertTrue($account()->mustChangePassword);
+
+        $this->call('PATCH', "/api/trainers/{$mine['id']}", ['email' => 'ana.new@example.test']);
+        $this->assertSame('ana.new@example.test', $account()->email);
+        $this->call('PATCH', "/api/trainers/{$mine['id']}/access", ['active' => false]);
+        $this->assertFalse($account()->canLogin());
+        $this->call('PATCH', "/api/trainers/{$mine['id']}/access", ['active' => true]);
+        $this->call('PATCH', "/api/trainers/{$mine['id']}", ['active' => false]);
+        $this->assertFalse($account()->canLogin());
+
+        // Same e-mail as a staff account: linked, role and password untouched, access follows the sheet.
+        $admin = $this->loginAs('ADMIN', 'boss@example.test');
+        $adminId = $admin->getId();
+        $this->client->loginUser($this->em()->getRepository(User::class)->find($owner->getId()));
+        $boss = $this->call('POST', '/api/trainers', ['firstName' => 'Bo', 'lastName' => 'Test', 'email' => 'Boss@example.test']);
+        $this->assertSame('linked', $this->call('POST', "/api/trainers/{$boss['id']}/access")['result']);
+        $this->call('POST', "/api/trainers/{$boss['id']}/access");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('PATCH', "/api/trainers/{$boss['id']}/access", ['active' => false]);
+        $this->assertResponseStatusCodeSame(422);
+
+        $admin = $this->em()->getRepository(User::class)->find($adminId);
+        $this->assertSame('ROLE_ADMIN', $admin->getRole());
+        $this->assertSame('x', $admin->password);
+        $this->client->loginUser($admin);
+        $this->assertTrue($this->call('GET', '/api/auth/me')['trainer']);
+        $this->call('GET', '/api/me/classes');
+        $this->assertResponseIsSuccessful();
+
+        $this->client->loginUser($this->em()->getRepository(User::class)->find($owner->getId()));
+        $this->call('DELETE', "/api/trainers/{$boss['id']}");
+        $admin = $this->em()->getRepository(User::class)->find($adminId);
+        $this->assertTrue($admin->canLogin());
+        $this->client->loginUser($admin);
+        $this->call('GET', '/api/me/classes');
+        $this->assertResponseStatusCodeSame(403);
+
+        $this->loginAs('SUIVI');
+        $this->call('POST', "/api/trainers/{$mine['id']}/access");
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testSuperAdminCanImpersonateAndComeBack(): void
+    {
+        $this->loginAs('SUPER_ADMIN', 'peer@example.test');
+        $peer = $this->em()->getRepository(User::class)->findOneBy(['email' => 'peer@example.test'])->getId();
+        $target = $this->call('POST', '/api/users', ['email' => 'suivi@example.test', 'name' => 'Cible', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long'])['id'];
+        $owner = new User('owner@example.test', 'Proprietaire', '', ['ROLE_SUPER_ADMIN']);
+        $owner->password = static::getContainer()->get(UserPasswordHasherInterface::class)->hashPassword($owner, 'un-mot-de-passe-long');
+        $this->em()->persist($owner);
+        $this->em()->flush();
+        $this->client->restart();
+        $this->client->jsonRequest('POST', '/api/auth/login', ['username' => 'owner@example.test', 'password' => 'un-mot-de-passe-long']);
+
+        $this->call('POST', "/api/auth/impersonate/$peer");
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('POST', "/api/auth/impersonate/$target");
+        $this->assertResponseStatusCodeSame(204);
+        $me = $this->call('GET', '/api/auth/me');
+        $this->assertSame(['suivi@example.test', 'Proprietaire', false], [$me['email'], $me['impersonator'], $me['mustChangePassword']]);
+        $this->call('GET', '/api/virtual-classes');
+        $this->assertResponseIsSuccessful();
+        $this->call('GET', '/api/users'); // only the borrowed rights apply
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('POST', '/api/auth/change-password', ['password' => 'un-autre-mot-de-passe']);
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('POST', "/api/auth/impersonate/$target");
+        $this->assertResponseStatusCodeSame(403);
+
+        $this->call('POST', '/api/auth/impersonate/exit');
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame('owner@example.test', $this->call('GET', '/api/auth/me')['email']);
+        $rows = $this->em()->getConnection()->fetchFirstColumn("SELECT user_email FROM audit_log WHERE action LIKE 'IMPERSONATION%'");
+        $this->assertSame(['owner@example.test', 'owner@example.test'], $rows);
+
+        $this->call('POST', '/api/auth/impersonate/exit');
+        $this->assertResponseStatusCodeSame(409);
+    }
+
+    public function testUserEditKeepsUntouchedAccessAndReadsPhotoOnTheSheetOnly(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+        $id = $this->call('POST', '/api/users', ['email' => 'e@example.test', 'name' => 'Avant Test', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long', 'profilePhoto' => $png, 'organizations' => ["/api/organizations/$org"]])['id'];
+        $password = $this->em()->getRepository(User::class)->find($id)->password;
+        $this->call('PATCH', "/api/users/$id", ['name' => 'Apres Test', 'jobTitle' => 'DPC', 'role' => 'ROLE_ADMIN', 'customRoleId' => 0, 'organizations' => ["/api/organizations/$org"]]);
+        $this->assertResponseIsSuccessful();
+        $sheet = $this->call('GET', "/api/users/$id");
+        $this->assertSame(['Apres Test', 'ROLE_ADMIN', $png], [$sheet['name'], $sheet['role'], $sheet['profilePhoto']]);
+        $this->assertCount(1, $sheet['organizations']);
+        $this->assertSame($password, $this->em()->getRepository(User::class)->find($id)->password);
+        foreach ($this->call('GET', '/api/users') as $row) {
+            $this->assertArrayNotHasKey('profilePhoto', $row);
+        }
+    }
+
+    public function testSuperAdminResendsATemporaryPassword(): void
+    {
+        $owner = $this->loginAs('SUPER_ADMIN', 'owner@example.test')->getId();
+        $id = $this->call('POST', '/api/users', ['email' => 'r@example.test', 'name' => 'R', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long'])['id'];
+        $account = fn () => $this->em()->getRepository(User::class)->find($id);
+        $before = $account()->password;
+        $this->call('POST', "/api/users/$id/access");
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertEmailCount(1);
+        $this->assertNotSame($before, $account()->password);
+        $this->assertTrue($account()->mustChangePassword);
+
+        $this->call('POST', "/api/users/$owner/access");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('PATCH', "/api/users/$id", ['active' => false]);
+        $this->call('POST', "/api/users/$id/access");
+        $this->assertResponseStatusCodeSame(409);
+
+        $this->loginAs('ADMIN');
+        $this->call('POST', "/api/users/$id/access");
         $this->assertResponseStatusCodeSame(403);
     }
 }

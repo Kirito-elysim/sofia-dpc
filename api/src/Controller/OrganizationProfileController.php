@@ -14,7 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/organization-profiles')]
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('SOFIA_ORGANIZATIONS')]
 final class OrganizationProfileController extends AbstractController
 {
     private const FIELDS = [
@@ -28,6 +28,7 @@ final class OrganizationProfileController extends AbstractController
     private const KINDS = ['logo','signature','stamp','kbis','qualiopi','rib','declaration'];
 
     #[Route('/drafts', methods: ['GET'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function drafts(Connection $db): JsonResponse
     {
         return $this->json($db->fetchAllAssociative("SELECT id, fields->>'name' AS name, step, updated_at
@@ -36,6 +37,7 @@ final class OrganizationProfileController extends AbstractController
     }
 
     #[Route('/drafts/{id}', methods: ['GET'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function draft(int $id, Connection $db): JsonResponse
     {
         $row = $db->fetchAssociative('SELECT step, fields, files FROM organization_draft
@@ -53,6 +55,7 @@ final class OrganizationProfileController extends AbstractController
 
     #[Route('/drafts', methods: ['POST'])]
     #[Route('/drafts/{id}', methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function saveDraft(Request $request, Connection $db, ?int $id = null): JsonResponse
     {
         $step = filter_var($request->request->getString('step'), FILTER_VALIDATE_INT);
@@ -84,6 +87,7 @@ final class OrganizationProfileController extends AbstractController
     }
 
     #[Route('/drafts/{id}', methods: ['DELETE'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function discardDraft(int $id, Connection $db): Response
     {
         if (!self::closeDraft($db, $id, $this->ownerId())) {
@@ -94,6 +98,7 @@ final class OrganizationProfileController extends AbstractController
     }
 
     #[Route('/{id}', requirements: ['id'=>'\d+'], methods: ['GET'])]
+    #[IsGranted('SOFIA_EDIT_ORGANIZATIONS')]
     public function detail(Organization $organization, EntityManagerInterface $em): JsonResponse
     {
         if ($organization->getDeletedAt() !== null) {
@@ -113,8 +118,12 @@ final class OrganizationProfileController extends AbstractController
 
     #[Route('', methods: ['POST'])]
     #[Route('/{id}', requirements: ['id'=>'\d+'], methods: ['POST'])]
+    #[IsGranted('SOFIA_EDIT_ORGANIZATIONS')]
     public function save(Request $request, EntityManagerInterface $em, ValidatorInterface $validator, ?int $id=null): JsonResponse
     {
+        if ($id === null) {
+            $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
+        }
         $organization=$id===null ? null : $em->find(Organization::class,$id);
         if ($id!==null && (!$organization || $organization->getDeletedAt() !== null)) {
             throw $this->createNotFoundException();
@@ -200,6 +209,9 @@ final class OrganizationProfileController extends AbstractController
     {
         if ($organization->getDeletedAt() !== null) {
             throw $this->createNotFoundException();
+        }
+        if ($kind !== 'logo') {
+            $this->denyAccessUnlessGranted('SOFIA_EDIT_ORGANIZATIONS');
         }
         $row=$em->getConnection()->fetchAssociative('SELECT name,mime,content FROM organization_document WHERE organization_id=? AND kind=? AND deleted_at IS NULL',
             [$organization->getId(),$kind]);

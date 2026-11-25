@@ -41,3 +41,6 @@
 .catalog .oa-title > .oa-icon { height: 2.75vw; min-height: 30px; object-fit: contain }
 .catalog .oa-title > .blue { font-weight: 550; white-space: nowrap }
 .catalog .oa-title > .blue svg { width: 1.3em; height: 1.3em }
+.cat-dialog .cat-access p{margin:8px 0}
+.cat-dialog .cat-access button{margin-right:8px;padding:8px 14px;border:1px solid #1557F5;border-radius:6px;background:#fff;color:#1557F5;font-weight:600;cursor:pointer}
+.cat-dialog .cat-access button:disabled{opacity:.5;cursor:default}

@@ -11,7 +11,7 @@ const fresh: Draft = {name:'',hosts:[],organizations:[],archived:false,policy:{p
 const labels = {passcode:'Protection par code',waitingRoom:'Salle d’attente',joinBeforeHost:'Arrivée avant l’hôte'}
 const toggle = (ids:number[], id:number) => ids.includes(id) ? ids.filter(value=>value!==id) : [...ids,id]
 
-export default function VirtualClassConfigs() {
+export default function VirtualClassConfigs({canWrite}:{canWrite:boolean}) {
   const client=useQueryClient()
   const directory=useQuery({queryKey:['virtual-class-configs'],queryFn:()=>api<Directory>('/virtual-class-configs')})
   const [draft,edit]=useState<Draft|null>(null)
@@ -23,7 +23,7 @@ export default function VirtualClassConfigs() {
   const data=directory.data
   const moved=data?.organizations.filter(org=>draft?.organizations.includes(org.id)&&org.config!=null&&org.config!==draft.id)
   return <section className="ad-work">
-    <header><Settings/><div><h1>Configurations des classes virtuelles</h1><p>Réglages Zoom et comptes hôtes par organisme</p></div><button className="primary page-add" onClick={()=>open(fresh)}><Plus/>Nouvelle configuration</button></header>
+    <header><Settings/><div><h1>Configurations des classes virtuelles</h1><p>Réglages Zoom et comptes hôtes par organisme</p></div>{canWrite&&<button className="primary page-add" onClick={()=>open(fresh)}><Plus/>Nouvelle configuration</button>}</header>
 
     {directory.error&&<p role="alert">{directory.error.message}</p>}
     {directory.isLoading&&<p>Chargement…</p>}
@@ -31,7 +31,7 @@ export default function VirtualClassConfigs() {
       <tbody>{data.items.map(config=>{
         const organizations=data.organizations.filter(org=>org.config===config.id)
         return <tr key={config.id}><td>{config.name}</td><td>{organizations.map(org=>org.name).join(', ')||'—'}</td>
-          <td>{config.archived?'Archivée':'Active'}</td><td><button onClick={()=>open({...config,organizations:organizations.map(org=>org.id)})}>Modifier</button></td></tr>
+          <td>{config.archived?'Archivée':'Active'}</td><td>{canWrite&&<button onClick={()=>open({...config,organizations:organizations.map(org=>org.id)})}>Modifier</button>}</td></tr>
       })}</tbody></table></div>}
     {draft&&data&&<form className="ad-panel mt-4 grid gap-3" onSubmit={event=>{
       event.preventDefault()

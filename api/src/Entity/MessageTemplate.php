@@ -9,8 +9,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity]
 #[ApiResource(operations: [
     new GetCollection(paginationEnabled: false), new Get(),
-    new Post(security: "is_granted('ROLE_ADMIN')"), new Patch(security: "is_granted('ROLE_ADMIN')"),
-], security: "is_granted('ROLE_LECTURE')")]
+    new Post(security: "is_granted('ROLE_SUPER_ADMIN')"), new Patch(security: "is_granted('ROLE_SUPER_ADMIN')"),
+], security: "is_granted('ROLE_SUPER_ADMIN')")]
 #[Assert\Expression("this.channel != 'SMS' or this.isSmsLengthValid()", message: 'Le SMS doit rester inférieur à 160 caractères.')]
 class MessageTemplate
 {

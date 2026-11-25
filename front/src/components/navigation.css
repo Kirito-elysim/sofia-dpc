@@ -34,3 +34,35 @@
   .sofia-side nav > span, .sofia-side nav .future { display: none; }
   .sofia-side details:not(:focus-within) > :not(summary) { display: none; }
 }
+
+.sofia-top .sofia-account-actions {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 175px;
+  padding: 5px;
+  border: 1px solid #d9e3f1;
+  border-radius: 9px;
+  background: white;
+  box-shadow: 0 4px 14px #1836621a;
+}
+.sofia-top details .sofia-account-actions button {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 5px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.sofia-account-actions button:hover { background: #eef4fc }
+.sofia-account-actions button svg { width: 16px; height: 16px }
+.sofia-account-actions p { padding: 6px 8px; color: #b42937 }
+
+.sofia-side .brand { height: auto }
+.impersonation{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:10px 14px;border:1px solid #F59E0B;border-radius:8px;background:#FEF3C7;color:#1E2347}
+.impersonation button{padding:6px 12px;border:0;border-radius:6px;background:#1557F5;color:#fff;font-weight:600;cursor:pointer}

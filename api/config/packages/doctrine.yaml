@@ -24,6 +24,8 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Entity'
                 prefix: 'App\Entity'
                 alias: App
+        filters:
+            organization_scope: { class: App\Security\OrganizationFilter, enabled: false }
         controller_resolver:
             auto_mapping: false
 

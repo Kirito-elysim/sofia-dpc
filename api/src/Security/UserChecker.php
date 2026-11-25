@@ -11,7 +11,7 @@ final class UserChecker implements UserCheckerInterface
 {
     public function checkPreAuth(UserInterface $user): void
     {
-        if ($user instanceof User && !$user->active) {
+        if ($user instanceof User && !$user->canLogin()) {
             throw new CustomUserMessageAccountStatusException('Compte désactivé.');
         }
     }

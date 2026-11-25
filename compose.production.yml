@@ -8,6 +8,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in Coolify}
       SOFIA_BOOTSTRAP_ADMIN_EMAIL: ${SOFIA_BOOTSTRAP_ADMIN_EMAIL:-}
       SOFIA_BOOTSTRAP_ADMIN_HASH: ${SOFIA_BOOTSTRAP_ADMIN_HASH:-}
+      SOFIA_FRONT_URL: ${SOFIA_FRONT_URL:-https://sofia.mahdora.fr}
       MAILER_DSN: ${MAILER_DSN:-null://null}
     expose: ["80"]
     volumes:

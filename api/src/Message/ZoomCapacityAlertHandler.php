@@ -18,7 +18,10 @@ final class ZoomCapacityAlertHandler
         $training = $this->em->find(Training::class, $alert->trainingId);
         if (!$training) { return; }
         $admins = array_filter($this->em->getRepository(User::class)->findBy(['active' => true]),
-            static fn (User $u) => in_array($u->getRole(), ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN'], true));
+            static fn (User $u) => $u->getRole() === 'ROLE_SUPER_ADMIN' || (
+                in_array('SCHEDULE', \App\Security\Permissions::forUser($u), true)
+                && ($u->organizations->contains($training->organization) || ($u->organizations->isEmpty() && $u->organization === $training->organization))
+            ));
         if (!$admins) { return; }
         $this->mailer->send((new Email())->from($training->organization->emailFrom)
             ->bcc(...array_values(array_map(static fn (User $u) => $u->email, $admins)))

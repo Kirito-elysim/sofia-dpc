@@ -24,7 +24,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 #[ApiResource(
     operations: [
         new GetCollection(),
-        new Get(),
+        new Get(normalizationContext: ['groups' => ['user:read', 'user:item']]),
         new Post(validationContext: ['groups' => ['Default', 'create']], processor: UserProcessor::class),
         new Patch(processor: UserProcessor::class),
     ],
@@ -43,7 +43,48 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups('user:write'), Assert\NotBlank(groups: ['create']), Assert\Length(min: 12, max: 4096, minMessage: '12 caractères minimum.')]
     public ?string $plainPassword = null;
 
+    /** @var \Doctrine\Common\Collections\Collection<int, Organization> */
+    #[ORM\ManyToMany(targetEntity: Organization::class), ORM\JoinTable(name: 'user_organization'), Groups(['user:read','user:write'])]
+    public \Doctrine\Common\Collections\Collection $organizations;
+
+    public function addOrganization(Organization $organization): void
+    {
+        if (!$this->organizations->contains($organization)) {
+            $this->organizations->add($organization);
+        }
+    }
+
+    public function removeOrganization(Organization $organization): void
+    {
+        $this->organizations->removeElement($organization);
+    }
+
+    #[ORM\ManyToOne]
+    public ?CustomRole $customRole = null;
+
+    #[Groups('user:write')]
+    public ?int $customRoleId = null;
+
+    #[Groups('user:read')]
+    public function getAssignedRole(): string
+    {
+        return $this->customRole ? 'custom:'.$this->customRole->id : $this->getRole();
+    }
+
+    #[ORM\Column(options: ['default' => false])]
+    public bool $mustChangePassword = false;
+
+    #[Groups('user:write')]
+    public bool $sendAccess = false;
+
+    #[ORM\Column(length: 40, nullable: true), Groups(['user:read','user:write']), Assert\Length(max: 40)]
+    public ?string $phone = null;
+
+    #[ORM\Column(length: 150, nullable: true), Groups(['user:read','user:write']), Assert\Length(max: 150)]
+    public ?string $jobTitle = null;
+
     // ROLE_FORMATEUR sits outside the staff hierarchy: it only reaches /api/me/classes and is bound to one Trainer.
+    // A staff account may be bound to a Trainer too, which adds "Mes classes" to its role.
     #[ORM\OneToOne, Groups(['user:read', 'user:write'])]
     public ?Trainer $trainer = null;
 
@@ -61,6 +102,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         #[ORM\Column(type: 'json')] public array $roles = ['ROLE_LECTURE'],
         #[ORM\Column, Groups(['user:read', 'user:write'])] public bool $active = true,
     ) {
+        $this->organizations = new \Doctrine\Common\Collections\ArrayCollection();
     }
 
     #[Groups('user:read')]
@@ -82,12 +124,43 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = [$role];
     }
 
+    // Read on a single account only: the list would carry every picture.
+    #[ORM\Column(type: 'text', nullable: true), Groups(['user:write', 'user:item'])]
+    public ?string $profilePhoto = null;
+
+    #[Assert\Callback]
+    public function validateProfilePhoto(ExecutionContextInterface $context): void
+    {
+        if ($this->profilePhoto === null) {
+            return;
+        }
+        if (strlen($this->profilePhoto) <= 2796230 && preg_match('~^data:(image/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$~D', $this->profilePhoto, $parts)) {
+            $bytes = base64_decode($parts[2], true);
+            $info = $bytes !== false && strlen($bytes) <= 2 * 1024 * 1024 ? @getimagesizefromstring($bytes) : false;
+            if ($info && $info['mime'] === $parts[1]) {
+                return;
+            }
+        }
+        $context->buildViolation('Choisissez une image JPG ou PNG de 2 Mo maximum.')->atPath('profilePhoto')->addViolation();
+    }
+
     #[Assert\Callback]
     public function validateTrainer(ExecutionContextInterface $ctx): void
     {
-        if (('ROLE_FORMATEUR' === $this->getRole()) !== (null !== $this->trainer)) {
-            $ctx->buildViolation('Un compte formateur doit être lié à un formateur, et seulement lui.')->atPath('trainer')->addViolation();
+        if ('ROLE_FORMATEUR' === $this->getRole() && null === $this->trainer) {
+            $ctx->buildViolation('Un compte formateur doit être lié à un formateur.')->atPath('trainer')->addViolation();
         }
+    }
+
+    public function hasTrainerAccess(): bool
+    {
+        return $this->trainer && $this->trainer->active && !$this->trainer->getDeletedAt();
+    }
+
+    /** A trainer-only account follows its sheet; a staff account does not. */
+    public function canLogin(): bool
+    {
+        return $this->active && ('ROLE_FORMATEUR' !== $this->getRole() || $this->hasTrainerAccess());
     }
 
     public function getUserIdentifier(): string

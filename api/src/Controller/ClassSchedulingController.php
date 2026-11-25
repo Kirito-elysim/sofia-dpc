@@ -17,7 +17,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ClassSchedulingController extends AbstractController
 {
     #[Route('/api/scheduled-classes', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('SOFIA_SCHEDULE')]
     public function __invoke(Request $request, EntityManagerInterface $em, MessageBusInterface $bus, #[Autowire('%env(int:ZOOM_BUFFER_MINUTES)%')] int $buffer): JsonResponse
     {
         $input = $request->toArray();

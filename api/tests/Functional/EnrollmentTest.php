@@ -42,6 +42,9 @@ class EnrollmentTest extends WebTestCase
     private function login(string $role): void
     {
         $user = new User("$role@example.test", 'Test', 'x', ["ROLE_$role"]);
+        foreach ($this->em->getRepository(Organization::class)->findAll() as $organization) {
+            $user->addOrganization($organization);
+        }
         $this->em->persist($user);
         $this->em->flush();
         $this->client->loginUser($user);
@@ -114,7 +117,7 @@ class EnrollmentTest extends WebTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->client->request('GET', '/api/audit');
         $this->assertResponseStatusCodeSame(403);
-        $this->login('ADMIN');
+        $this->login('SUPER_ADMIN');
         $this->client->request('GET', '/api/audit');
         $this->assertResponseIsSuccessful();
         $entries = json_decode($this->client->getResponse()->getContent(), true)['entries'];

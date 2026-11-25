@@ -22,11 +22,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new GetCollection(), new Get(),
-        new Post(security: "is_granted('ROLE_ADMIN')"),
-        new Patch(security: "is_granted('ROLE_ADMIN')"),
-        new Delete(security: "is_granted('ROLE_ADMIN')", processor: SoftDeleteProcessor::class),
+        new Post(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAINERS')"),
+        new Patch(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAINERS')"),
+        new Delete(security: "is_granted('SOFIA_EDIT_TRAINERS')", processor: SoftDeleteProcessor::class),
     ],
-    security: "is_granted('ROLE_LECTURE')",
+    security: "is_granted('SOFIA_TRAINERS')",
     normalizationContext: ['groups' => ['read']],
     denormalizationContext: ['groups' => ['write']],
 )]

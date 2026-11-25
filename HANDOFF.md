@@ -137,7 +137,7 @@ cd front && npm run lint && npm test && npm run build
 
 ## Rôles par contexte : compte formateur
 - `ROLE_FORMATEUR` est **hors hiérarchie** staff : il n'accède qu'à `GET /api/me/classes` (ses demi-journées à venir, annulées exclues) et à l'écran « Mes classes ». Le reste de l'API lui renvoie 403.
-- Un compte FORMATEUR est lié à exactement un `Trainer` (`User.trainer`, unique) ; un compte staff n'en a pas (validation 422). Création : Paramétrage > Utilisateurs et rôles.
+- Un compte FORMATEUR est lié à un `Trainer` (`User.trainer`, unique). Un compte de gestion peut aussi y être rattaché. L’accès se gère depuis la fiche formateur (voir « Accès formateur » en fin de document).
 - `ClassSlot` (classe + créneau + formateur) existe en version minimale ; la réservation et le provisionnement Zoom sont décrits dans la section de reprise ci-dessus. `app:seed-demo` crée un formateur et des slots de démo.
 - Pas de rôle par organisme : un rôle staff est global (à faire si besoin, voir SUIVI).
 
@@ -301,3 +301,219 @@ Dans Identification à la création, trois boutons radio affichent la pastille e
 L’étape Documents de création réutilise le bloc Identité visuelle de l’édition pour le logo, la signature et le cachet. Chaque carte affiche l’aperçu, le nom, le format, la taille et les actions d’ajout, de remplacement et de suppression. Les visuels acceptent le glisser-déposer. Le logo reste la seule pièce obligatoire à la création.
 
 Build et lint réussis. En Chromium, reprise mobile d’un brouillon avec sept pièces, décodage de l’aperçu du logo, retrait et blocage de la création, nouvel ajout et création avec les sept pièces vérifiés.
+
+### Création validée et édition harmonisée
+
+La création validée a été commitée localement dans `9744059`, avec les changements de liste et d’API dont elle dépend. La configuration locale sensible reste hors de ce commit.
+
+La fiche d’édition partage les champs visibles, leurs aides et le sélecteur visuel de couleurs avec la création. Le code de l’organisme reste en lecture seule en édition. Les panneaux du formulaire sont blancs. L’aperçu prend la teinte de la couleur sélectionnée et affiche à côté du nom le badge Actif en vert ou Inactif en gris. Les réglages supplémentaires de l’ancienne fiche restent conservés dans le profil enregistré.
+
+Recette Chromium locale à 1440 × 900 et 390 × 844. Les aides, les fonds, le badge, la couleur de l’aperçu et la persistance du statut et de la couleur ont été vérifiés. Build et lint frontend réussis. L’harmonisation de l’édition est dans le dépôt local en attente de validation.
+
+### Confirmation de suppression d’un organisme
+
+La liste et l’édition partagent la même fenêtre centrée. Le texte précise le retrait de la liste, la conservation de l’historique et la trace dans le journal d’audit. La liste affiche le nombre de classes rattachées lorsqu’il est connu et propose la désactivation pour un organisme actif. Annuler reçoit le focus à l’ouverture. Les actions sont bloquées pendant la requête et les erreurs apparaissent dans la fenêtre.
+
+Build et lint réussis. Chromium a vérifié le centrage, la fermeture clavier et le focus en édition à 1440 × 900 et 390 × 844. Dans la liste, centrage, bouton rouge, annulation et suppression logique d’un organisme fictif ont été vérifiés à 1440 × 900 et 1920 × 1080.
+
+### Confirmation renforcée de suppression
+
+Depuis la liste et la fiche d’édition, la fenêtre affiche au centre un avertissement et le nombre de classes rattachées lorsque le total est positif. L’édition utilise le même total API que la liste. La saisie du nom exact active le bouton de confirmation. « Désactiver » est également disponible depuis l’édition pour un organisme actif. Le texte décrit la suppression logique et la conservation de l’historique.
+
+Build et lint réussis. Chromium a vérifié le nombre en édition avec un total de test simulé, le centrage, la fermeture clavier, le refus d’un nom incorrect et la suppression logique d’un organisme fictif avec le nom exact.
+
+### Liste des organismes et vue tableau
+
+Le focus de la recherche et du statut apparaît discrètement autour du filtre et reste visible au clavier. La vue tableau affiche le nom, le code, le statut, le nombre de classes et les actions, avec des lignes pour les brouillons. En l’absence de résultats, un panneau propose de réinitialiser les filtres. En l’absence d’organismes, il propose la création aux administrateurs. Le compteur est masqué quand aucun organisme publié ne correspond.
+
+Chromium a vérifié le focus, le passage de cartes à tableau, l’état filtré vide, la réinitialisation et l’absence de débordement horizontal de la page à 390 × 844. Build et lint frontend réussis.
+
+### Lisibilité de la vue tableau des organismes
+
+La vue tableau utilise des lignes légèrement alternées, un code mis en évidence, des nombres de classes alignés et des actions compactes. Les boutons d’action gardent des libellés accessibles et une infobulle. Build et lint frontend réussis.
+
+### Visibilité de la pagination des organismes
+
+La liste pagine les organismes par groupes de dix. Les boutons de pagination s’affichent lorsqu’il existe une deuxième page. Le compteur est visible dès le premier organisme trouvé. Ce comportement est partagé par les vues cartes et tableau. Vérification par lecture du code.
+
+### Validation de la page Organismes
+
+L’utilisateur a validé la page Organismes le 25 novembre 2026 après les ajustements de la liste, de la vue tableau, de la pagination, de la fiche d’édition et de la confirmation de suppression. La création avait déjà été validée et commitée localement dans `9744059`. Les changements d’édition et de liste restent à commiter.
+
+### Protection du parcours Organismes validé
+
+Toute modification du parcours Organismes (liste, vues cartes et tableau, création, brouillons, édition et suppression) exige une demande explicite de l’utilisateur. Lors d’un changement ailleurs dans Sofia, vérifier les régressions sur ce parcours si des composants, styles ou API partagés sont touchés. Si une correction implique de modifier le parcours, signaler le problème et attendre une demande explicite.
+
+### Déconnexion depuis le menu de compte
+
+Le pare-feu Symfony ferme la session et l’API de déconnexion répond directement avec HTTP 204. Le menu indique la requête en cours, bloque les clics répétés et affiche un message en cas d’échec. Après succès, le frontend annule les requêtes en cours, vide les données de compte mises en cache et affiche le formulaire de connexion.
+
+Build et lint réussis. Depuis Organismes dans Chromium local, déconnexion HTTP 204, formulaire après rechargement, refus HTTP 401 de l’API de session et reconnexion avec retour à la liste vérifiés. Les sources du parcours Organismes n’ont pas été modifiées pour ce correctif.
+
+### Logo de la barre latérale
+
+La barre latérale commune affiche le PNG fourni par l’utilisateur, avec ses dimensions et sa transparence d’origine. La hauteur suit la largeur définie par la navigation sur ordinateur et mobile. Le PNG du build correspond à l’original. Build et lint frontend réussis.
+
+### État vide de la liste des utilisateurs
+
+Le panneau « Aucun résultat pour ce filtre » s’affiche uniquement quand le résultat filtré est vide. Lorsqu’il y a des utilisateurs, le tableau et sa pagination s’affichent. Build et lint frontend réussis.
+
+### Pictogrammes et contrôles de la liste des utilisateurs
+
+L’état vide utilise une icône vectorielle. Les boutons d’action et de réinitialisation reprennent les dimensions de Formations. La règle commune des listes déroulantes adopte un contour de focus discret sur les écrans Sofia, avec un repère visible au clavier. Le parcours Organismes garde ses styles validés. Build et lint frontend réussis.
+
+Chromium local a confirmé le pictogramme SVG dans l’état vide, les mêmes dimensions calculées pour le bouton Modifier dans Utilisateurs et Formations, le focus discret des sélecteurs sur ces deux écrans et le focus validé sur Organismes.
+
+### Alignement des filtres Utilisateurs
+
+Les sélecteurs utilisent le chevron Lucide de la création d’organisme. Les sélecteurs, la recherche et le bouton Réinitialiser ont une hauteur commune de 42 px. Build et lint frontend réussis.
+
+### Chevron commun des listes déroulantes
+
+Les sélecteurs simples de Sofia utilisent le même chevron Lucide de 16 px que les filtres Utilisateurs et le formulaire Organismes. Les composants qui ont déjà leur chevron gardent leur rendu. Les listes à choix multiples conservent leur présentation native. Build et lint frontend réussis.
+
+### Badges du tableau Utilisateurs
+
+Les rôles et les statuts utilisent des pictogrammes Lucide de 15 px. Super Admin a une couronne violette, Admin un bouclier bleu, Actif une coche verte et Inactif un cercle gris avec un tiret. Build et lint frontend réussis.
+
+### Pictogrammes communs d’activation
+
+Utilisateurs, Formations, Formateurs, Organismes et Modèles de messages partagent les mêmes pictogrammes de statut. Actif utilise une coche cerclée et Inactif un tiret cerclé. Activer utilise un cercle avec un triangle et Désactiver un cercle avec une pause. L’application à Organismes répond à la demande explicite d’harmonisation des pictogrammes sur tout Sofia. Build, lint et recettes Chromium de la liste Organismes et des écrans Utilisateurs et Formations réussis.
+
+### Alignement du bouton Supprimer dans Utilisateurs
+
+L’icône et le libellé de Supprimer sont centrés dans le bouton du tableau Utilisateurs. Build et lint frontend réussis.
+
+### Alignement vertical des actions Utilisateurs
+
+La colonne Actions réserve 294 px sur la vue tableau à largeur fixe. Les boutons Activer et Désactiver occupent le même emplacement, ce qui aligne les boutons Supprimer d’une ligne à l’autre. Build et lint frontend réussis.
+
+### Style partagé des tableaux Organismes et Utilisateurs
+
+À la demande de l’utilisateur, la vue tableau d’Organismes reprend le style de tableau Utilisateurs et ses actions libellées Modifier, Activer ou Désactiver et Supprimer. Les deux tableaux partagent la grille d’actions pour aligner les boutons verticalement. La vue cartes conserve ses contrôles. Build et lint frontend réussis.
+
+Chromium local a vérifié la vue tableau des organismes, la réinitialisation des filtres et l’absence de débordement horizontal de la page à 390 × 844.
+
+### Largeur des actions dans Utilisateurs
+
+La colonne intermédiaire des actions du tableau Utilisateurs a une largeur fixe de 104 px et son bouton occupe toute la largeur. Activer et Désactiver ont ainsi le même encombrement. Build et lint frontend réussis.
+
+### Largeur des actions dans Organismes
+
+La vue tableau Organismes partage avec Utilisateurs la largeur fixe de 104 px pour Activer et Désactiver, ce qui aligne Supprimer entre les lignes. Build et lint frontend réussis.
+
+### Avis sur la maquette de création utilisateur
+
+Le passage à une page dédiée suivrait le modèle d’Organismes. La structure proposée sépare l’identité et les accès. L’aperçu des permissions devrait refléter les droits réels du rôle en lecture seule. La photo, le téléphone et la fonction nécessiteraient un besoin métier et un stockage dédié. Un éventuel envoi d’invitation devrait utiliser un lien de définition du mot de passe. Avis donné sans changement du formulaire.
+
+### Cadrage des comptes et droits par organisme
+
+Le super administrateur a un accès global aux organismes et aux données, avec la possibilité de filtrer par organisme. Les comptes utilisateurs sont des comptes de gestion avec des rôles. Un compte restreint à un organisme ne peut lire, créer, modifier ou rattacher des données qu’au sein de cet organisme, selon son rôle. Les onglets sans autorisation sont masqués et les mêmes règles sont appliquées aux routes et à l’API. Un apprenant est un participant inscrit à une classe, distinct d’un compte utilisateur de gestion. Le compte formateur possède déjà un parcours séparé vers ses classes.
+
+Le rattachement organisme et la hiérarchie des rôles existent. Le contrôle par organisme reste à mettre en œuvre de manière systématique dans les lectures, les mutations et les relations. Ce cadrage n’a pas modifié le code applicatif.
+
+### Formation, classe virtuelle et e-learning
+
+La formation est l’offre pédagogique principale. Une classe virtuelle (CV) est une session programmée rattachée à une formation. Dans ce parcours, l’apprenant s’inscrit à la CV de la formation et reçoit son lien nominatif pour cette session. Une formation peut aussi être proposée en e-learning. Les modalités peuvent coexister dans le catalogue. Le parcours d’inscription e-learning et les éventuelles formations mixtes restent à préciser. Les droits d’accès suivent l’organisme de la formation. Cadrage métier, sans modification du code.
+
+### Page dédiée de création d’un utilisateur
+
+Depuis Utilisateurs, « Ajouter un utilisateur » ouvre `/settings/users/new`, réservée au super administrateur. La maquette est reprise avec les cartes Informations générales et Accès et rôle, un aperçu du profil par initiales et les permissions du rôle en lecture seule. La création utilise l’API existante, avec mot de passe de 12 caractères minimum. Un super administrateur n’a pas d’organisme de rattachement. Pour les autres rôles, le formulaire demande un organisme et, pour le rôle Formateur, un formateur lié. Le cloisonnement des comptes de gestion par organisme reste à implémenter côté serveur et le formulaire le signale. Photo, téléphone, fonction et envoi des accès restent hors de cette première version.
+
+Chromium local a vérifié l’ouverture depuis la liste, l’aperçu des rôles, l’apparition du champ formateur, l’affichage à 390 × 844 ainsi que la création d’un compte fictif inactif et son retour dans la liste. Build et lint frontend réussis.
+
+### Création utilisateur · rattachements multiples et première connexion
+
+Le formulaire propose des aides sous les champs, le téléphone et la fonction facultatifs, plusieurs organismes, et deux modes de remise du mot de passe temporaire (e-mail ou saisie visible pour remise manuelle). La migration Version20261125030000 reprend les rattachements existants. Les comptes créés par le formulaire doivent choisir un mot de passe personnel avant tout accès métier. La liste affiche et filtre les rattachements multiples. La restriction de toutes les données métier par organisme reste un chantier distinct.
+
+Recette locale via API avec comptes techniques example.test : création, restitution des rattachements, invitation reçue dans Mailpit, connexion temporaire, refus HTTP 403 avant renouvellement puis lecture autorisée après changement. Build front réussi. Diffusion réelle via MAILER_DSN et lien via SOFIA_FRONT_URL. Pas de test visuel de cette révision, ni de déploiement.
+
+### Sélecteur d’organismes et photo utilisateur
+
+La création utilise une liste déroulante filtrable à sélection multiple. Les organismes sélectionnés restent visibles et peuvent être retirés individuellement. La photo facultative JPG ou PNG de 2 Mo maximum peut être prévisualisée, remplacée et retirée avant création. Elle est enregistrée avec le compte et affichée dans le bandeau de l’utilisateur connecté. Migration Version20261125040000 appliquée en local. Build front réussi et persistance de la photo vérifiée via l’API après connexion d’un compte technique.
+
+### Carte Profil utilisateur
+
+Présentation alignée sur la référence de création : avatar circulaire avec crayon superposé, intitulé Photo de profil et indication du format au-dessus du bouton Choisir un fichier.
+
+### Administration, rôles personnalisés et périmètre des organismes
+
+La barre latérale regroupe Organismes, Utilisateurs, Rôles et permissions, Configurations des classes virtuelles et Comptes Zoom sous Administration. Les comptes ont un seul rôle et plusieurs rattachements possibles. Chaque permission du rôle s’applique à tous les organismes rattachés. Les actions qui dépendent d’autres rubriques activent aussi leurs permissions de lecture.
+
+Le super administrateur a un accès global. La gestion des utilisateurs, des rôles et comptes Zoom, la création d’organismes et les référentiels transversaux restent réservés au super administrateur. Les autres comptes voient les rubriques permises par leur rôle. Le tableau de bord des comptes rattachés présente leurs prochaines classes avec un filtre d’organisme. Le rôle système Formateur conserve son accès par affectation de créneau.
+
+L’API contrôle indépendamment les permissions et le périmètre. Les listes, les accès par identifiant et les rattachements tiennent compte des organismes. Une configuration partagée entre plusieurs organismes peut être modifiée par un utilisateur seulement si tous ces organismes sont dans son périmètre. Les modifications de rôle et de rattachement sont prises en compte par l’API dès la requête suivante. La navigation charge les droits depuis la session.
+
+Migration Version20261125050000 appliquée en local. Recette Chromium à 1440 × 900 sur les vrais écrans locaux avec un rôle créé puis attribué à deux organismes. Recette API de lecture, modification des droits et refus des rattachements externes. Suite PHPUnit sur une base isolée (18 tests, 217 assertions), build, tests et lint front réussis.
+
+### Gestion simplifiée des rôles
+
+Écran en deux colonnes avec indicateurs, liste recherchable des rôles système et personnalisés, filtre par type et formulaire. Chaque rubrique présente un interrupteur. Les actions associées sont déduites des rubriques actives et de leurs dépendances. Renommer un ancien rôle seul conserve ses permissions. Recette Chromium à 1440 × 900 avec création d’un rôle Planning et attribution à deux organismes. Build et lint réussis.
+
+### Filtres et état vide des rôles
+
+La recherche, le type et le nom du rôle utilisent un focus discret. Une recherche sans résultat remplace le tableau par le panneau utilisé sur Organismes avec un pictogramme et une action qui réinitialise les deux filtres.
+
+### Reprise après Codex — rôle Formateur à la création d’un utilisateur (25 novembre 2026)
+
+- Consigne de l’utilisateur : consigner les choix validés dans ce handoff à la fin de chaque demande.
+- Question posée : pourquoi « Formateur » est proposé sur `/settings/users/new`. Il s’agit du rôle `ROLE_FORMATEUR` (commit `9086918`) : compte lié à une fiche Formateur, limité à « Mes classes ». Il ne fait pas partie des quatre rôles de `CLAUDE.md`.
+- Décision en attente : conserver ce rôle à la création ou le retirer. Aucun code modifié.
+- Constat par lecture du code : la liste « Formateur lié » écarte les formateurs sans organisme, que l’API accepte.
+- Orientation exprimée par l’utilisateur : « Utilisateurs » désigne les comptes de gestion (back-office), distincts des formateurs. La création d’un formateur devrait créer son accès, avec le rôle Formateur limité à « Mes classes » (extensible plus tard).
+- Proposition faite, à valider avant tout code : case « Créer l’accès à Sofia » cochée par défaut sur la fiche formateur ; rôle Formateur retiré du formulaire et de la liste Utilisateurs ; compte géré depuis la fiche formateur (activer, désactiver, renvoyer l’accès) ; désactivation ou suppression du formateur = accès coupé ; e-mail déjà utilisé par un compte = aucun accès créé, avec message. Le parcours Organismes reste inchangé.
+- Retour de l’utilisateur : la proposition d’accès formateur est à ajuster ; points à préciser. Rien n’est validé ni développé.
+- Besoin confirmé par l’utilisateur : un administrateur peut aussi être formateur (même e-mail).
+- Proposition à valider : un seul compte par e-mail, le rôle de gestion est conservé et la fiche formateur y est rattachée. « Mes classes » s’ouvre à tout compte rattaché à une fiche formateur. Désactiver ou supprimer la fiche retire ce rattachement sans couper l’accès de gestion ; un compte uniquement formateur est désactivé. Impacts repérés : `User::validateTrainer`, contrôle d’organisme dans `UserProcessor` (super admin sans organisme), `MyClassesController`, menu et routage dans `App.tsx` / `Layout.tsx`.
+
+### Accès formateur — validé et développé le 25 novembre 2026
+
+Décisions validées par l’utilisateur (elles remplacent les propositions ci-dessus) :
+- « Utilisateurs » = comptes de gestion. Le rôle Formateur est retiré du formulaire de création, du filtre et de la liste Utilisateurs ; il reste visible dans Rôles et permissions.
+- Fiche formateur : case « Créer l’accès à Sofia » cochée par défaut à la création, invitation par e-mail avec mot de passe temporaire. En modification : créer, renvoyer, activer ou désactiver l’accès.
+- Un seul compte par e-mail : un compte de gestion existant est rattaché à la fiche, garde son rôle et son mot de passe, et voit « Mes classes » en plus.
+- Fiche désactivée ou supprimée : le compte uniquement formateur ne peut plus se connecter (réactiver la fiche le rétablit) ; le compte de gestion perd seulement « Mes classes ».
+- Le nom, l’e-mail et l’organisme d’un compte uniquement formateur suivent la fiche.
+- Choix technique : la gestion de l’accès demande le droit « Gérer les formateurs » sur l’organisme de la fiche.
+
+API : `GET /api/trainer-accounts`, `POST|PATCH /api/trainers/{id}/access`, `AccessMailer` partagé avec la création d’utilisateur, `me.trainer`. Pas de migration.
+
+Vérifications : PHPUnit 19 tests, 233 assertions sur une base créée puis supprimée pour l’occasion ; lint, 2 tests et build frontend. Recette navigateur locale en super admin : création avec accès, désactivation, rattachement d’un compte existant, menu « Mes classes », liste des rôles à la création d’utilisateur. Données de recette désactivées ensuite.
+
+Restes ouverts : en production l’envoi est refusé tant que `MAILER_DSN` n’est pas configuré ; réception du mail non contrôlée dans Mailpit à l’écran ; parcours d’un administrateur non super admin non recetté au navigateur ; PHPStan signale 36 erreurs de typage, aucune sur les fichiers ajoutés ; la base `app_test` locale n’est plus à jour des migrations ; la base de développement contient de nombreux comptes et rôles « Recette » antérieurs ; rien n’est commité.
+
+### Se connecter en tant que — 25 novembre 2026
+
+- Demande de l’utilisateur : ajouter l’option dans Utilisateurs et Formateurs. Bouton (icône) dans la colonne Actions des deux listes.
+- Règles retenues par défaut, à confirmer par l’utilisateur : réservé au super admin ; impossible vers un super admin, un compte désactivé ou depuis une connexion déjà empruntée ; les droits sont ceux du compte emprunté ; le mot de passe temporaire n’est ni demandé ni modifiable ; bandeau « Revenir à mon compte ».
+- Journal d’audit : début et fin tracés ; toute entrée écrite pendant l’emprunt porte l’auteur réel, avec le compte emprunté dans `onBehalfOf`. Les autres traces d’auteur (`MessageLog`) portent le compte emprunté.
+- API : `POST /api/auth/impersonate/{id}` et `POST /api/auth/impersonate/exit` (`SwitchUserToken`), `me.impersonator`. Pas de migration.
+- Vérifications : PHPUnit 20 tests, 244 assertions sur base temporaire ; lint, 2 tests et build frontend ; recette navigateur en 1440 × 900 depuis les deux listes, avec retour au compte d’origine. Comptes de recette désactivés. Rien n’est commité.
+- À noter : la colonne Actions d’Utilisateurs passe de 294 à 344 px ; en fenêtre étroite elle demande un défilement horizontal. Organismes inchangé.
+- Validé par l’utilisateur le 25 novembre 2026 : « Se connecter en tant que » reste réservé au super admin (cette règle n’est plus à confirmer).
+
+### Fiche utilisateur en modification — 25 novembre 2026
+
+- Demande de l’utilisateur : la fiche « Modifier » doit ressembler à « Créer ».
+- `/settings/users/:id/edit` réutilise le formulaire de création (mêmes cartes, aides, photo, aperçu des permissions). L’ancien formulaire générique des utilisateurs est retiré.
+- Différences : pas de bloc « Envoi des accès » ni de mot de passe ; rôle et statut verrouillés sur son propre compte ; nom de famille facultatif en modification (anciens comptes à un seul mot). Comme à la création, un compte hors super admin exige au moins un organisme pour être enregistré.
+- La photo est lue sur la fiche seule (`GET /api/users/{id}`), jamais dans la liste.
+- Non fait : changement ou renvoi du mot de passe d’un compte de gestion existant.
+- Vérifications : PHPUnit 21 tests, 250 assertions ; lint, 2 tests et build ; recette navigateur : ouverture préremplie, rattachement à SOFIA et fonction enregistrés. Comptes de recette désactivés. Rien n’est commité.
+
+### Renvoi du mot de passe temporaire — 25 novembre 2026
+
+- Demande de l’utilisateur : renvoi depuis la fiche utilisateur en modification (remplace le « Non fait » ci-dessus).
+- Bouton avec confirmation dans « Accès et rôle » ; e-mail à l’adresse enregistrée, ancien mot de passe invalidé, changement exigé à la connexion suivante. Réservé au super admin ; refusé sur son propre compte et sur un compte désactivé. Envoi par e-mail uniquement (pas de remise manuelle).
+- API : `POST /api/users/{id}/access` ; logique d’invitation partagée avec les formateurs dans `AccessMailer::invite`, tracée `ACCESS_SENT`.
+- Vérifications : PHPUnit 22 tests, 257 assertions ; lint, 2 tests, build ; recette navigateur avec réception dans Mailpit. Rien n’est commité.
+
+### Pagination des rôles — 25 novembre 2026
+
+- Demande de l’utilisateur : paginer le tableau de Rôles et permissions.
+- 10 par page par défaut (10, 25 ou 50), compteur et boutons Précédent / Suivant ; la recherche, le filtre de type et la réinitialisation reviennent à la page 1.
+- Vérifications : lint, 2 tests et build ; recette navigateur du passage en page 2. Compte de recette désactivé. Rien n’est commité.
+
+### Commit — 25 novembre 2026
+
+- À la demande de l’utilisateur, tout le travail en attente (reprise de Codex et sessions du 25 novembre) est commité en un seul commit sur la branche `feat/comptes-roles-acces-formateur`. Ni poussé, ni fusionné dans `main`, ni déployé. Les mentions « non commité » plus haut sont closes par ce commit.

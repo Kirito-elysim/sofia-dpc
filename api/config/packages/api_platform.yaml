@@ -7,6 +7,7 @@ api_platform:
         jsonld: ['application/ld+json']
     # Referentials are small; plain-JSON collections are returned whole (no paging). Revisit for classes/enrollments.
     exception_to_status:
+        Symfony\Component\Serializer\Exception\UnexpectedValueException: 400
         Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException: 409
     defaults:
         pagination_enabled: false

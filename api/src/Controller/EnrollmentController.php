@@ -24,7 +24,7 @@ class EnrollmentController extends AbstractController
     }
 
     #[Route('/virtual-classes/{id}/enrollments', methods: 'GET')]
-    #[IsGranted('ROLE_LECTURE')]
+    #[IsGranted('SOFIA_CLASSES')]
     public function list(VirtualClass $class): JsonResponse
     {
         $items = $this->em->getRepository(Enrollment::class)->findBy(['virtualClass' => $class], ['createdAt' => 'ASC']);
@@ -51,7 +51,7 @@ class EnrollmentController extends AbstractController
     }
 
     #[Route('/virtual-classes/{id}/enrollments', methods: 'POST')]
-    #[IsGranted('ROLE_SUIVI')]
+    #[IsGranted('SOFIA_ENROLL')]
     public function create(VirtualClass $class, #[MapRequestPayload] EnrollmentInput $in): JsonResponse
     {
         try {
@@ -64,7 +64,7 @@ class EnrollmentController extends AbstractController
     }
 
     #[Route('/enrollments/{id}', methods: 'DELETE')]
-    #[IsGranted('ROLE_SUIVI')]
+    #[IsGranted('SOFIA_ENROLL')]
     public function cancel(Enrollment $enrollment): Response
     {
         $this->enrollments->cancel($enrollment);

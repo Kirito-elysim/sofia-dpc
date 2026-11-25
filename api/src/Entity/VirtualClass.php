@@ -16,7 +16,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
 
 // Slots, trainers and Zoom accounts (ClassSlot) come in the next task.
 #[ORM\Entity]
-#[ApiResource(operations: [new GetCollection(), new Get()], security: "is_granted('ROLE_LECTURE')", normalizationContext: ['groups' => ['read']], order: ['date' => 'ASC'])]
+#[ApiResource(operations: [new GetCollection(), new Get()], security: "is_granted('SOFIA_CLASSES')", normalizationContext: ['groups' => ['read']], order: ['date' => 'ASC'])]
 class VirtualClass
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]

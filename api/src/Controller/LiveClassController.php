@@ -17,13 +17,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class LiveClassController extends AbstractController
 {
     #[Route('/api/live-presence/classes',methods:['GET'])]
-    #[IsGranted('ROLE_LECTURE')]
-    public function classes(Connection $db): JsonResponse
+    #[IsGranted('SOFIA_LIVE')]
+    public function classes(Connection $db, \App\Security\OrganizationScope $scope): JsonResponse
     {
-        $rows=$db->fetchAllAssociative(<<<'SQL'
+        $rows=$db->fetchAllAssociative(<<<SQL
             WITH slots AS (
                 SELECT s.*,t.title FROM class_slot s JOIN virtual_class c ON c.id=s.virtual_class_id JOIN training t ON t.id=c.training_id
-                WHERE c.status IN ('IN_PROGRESS','PLANNED') AND s.ends_at>now() AT TIME ZONE 'Europe/Paris'
+                WHERE {$scope->sql('t.organization_id')} AND c.status IN ('IN_PROGRESS','PLANNED') AND s.ends_at>now() AT TIME ZONE 'Europe/Paris'
                   AND s.starts_at<=(now() AT TIME ZONE 'Europe/Paris')+interval '30 minutes'
             ), devices AS (
                 SELECT DISTINCT ON (a.slot_id,a.connection_key) a.* FROM attendance_event a JOIN slots s ON s.id=a.slot_id
@@ -59,7 +59,8 @@ final class LiveClassController extends AbstractController
     }
 
     #[Route('/api/live-presence/classes/{id}/contact',methods:['POST'])]
-    #[IsGranted('ROLE_SUIVI')]
+    #[IsGranted('SOFIA_REMIND')]
+    #[IsGranted('SOFIA_LIVE')]
     public function contact(ClassSlot $slot,Request $request,EntityManagerInterface $em,MailerInterface $mailer,#[\Symfony\Component\DependencyInjection\Attribute\AutowireServiceClosure(TexterInterface::class)] \Closure $sms): JsonResponse
     {
         $data=$request->toArray();

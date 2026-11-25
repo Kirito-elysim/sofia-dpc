@@ -103,8 +103,8 @@ final class ZoomPresenceController extends AbstractController
     }
 
     #[Route('/api/live-presence', methods: ['GET'])]
-    #[IsGranted('ROLE_LECTURE')]
-    public function live(Connection $db): JsonResponse
+    #[IsGranted('SOFIA_LIVE')]
+    public function live(Connection $db, \App\Security\OrganizationScope $scope): JsonResponse
     {
         $rows = $db->fetchAllAssociative("SELECT a.id,a.at,a.event,a.person_role AS role,t.title,ts.label,
             CASE WHEN a.person_role='TRAINER' THEN concat_ws(' ',f.first_name,f.last_name)
@@ -112,7 +112,7 @@ final class ZoomPresenceController extends AbstractController
             FROM attendance_event a JOIN class_slot s ON s.id=a.slot_id JOIN virtual_class c ON c.id=s.virtual_class_id
             JOIN training t ON t.id=c.training_id JOIN time_slot ts ON ts.id=s.time_slot_id LEFT JOIN trainer f ON f.id=s.trainer_id
             LEFT JOIN enrollment e ON e.id=a.enrollment_id LEFT JOIN participant p ON p.id=e.participant_id
-            ORDER BY a.at DESC,a.id DESC LIMIT 100");
+            WHERE {$scope->sql('t.organization_id')} ORDER BY a.at DESC,a.id DESC LIMIT 100");
         return $this->json($rows);
     }
 }

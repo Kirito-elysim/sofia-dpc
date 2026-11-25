@@ -11,11 +11,11 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class AttendanceSummaryController extends AbstractController
 {
     #[Route('/api/live-presence/learners', methods: ['GET'])]
-    #[IsGranted('ROLE_LECTURE')]
-    public function __invoke(Connection $db): JsonResponse
+    #[IsGranted('SOFIA_LIVE')]
+    public function __invoke(Connection $db, \App\Security\OrganizationScope $scope): JsonResponse
     {
         // Scheduling stores Paris wall-clock times. Zoom supplies absolute instants.
-        $rows = $db->fetchAllAssociative(<<<'SQL'
+        $rows = $db->fetchAllAssociative(<<<SQL
             WITH slots AS (
                 SELECT s.id, s.virtual_class_id, s.starts_at AT TIME ZONE 'Europe/Paris' AS start_time,
                        t.title, ts.label
@@ -23,7 +23,7 @@ final class AttendanceSummaryController extends AbstractController
                 JOIN virtual_class c ON c.id = s.virtual_class_id
                 JOIN training t ON t.id = c.training_id
                 JOIN time_slot ts ON ts.id = s.time_slot_id
-                WHERE c.status IN ('PLANNED', 'IN_PROGRESS')
+                WHERE {$scope->sql('t.organization_id')} AND c.status IN ('PLANNED', 'IN_PROGRESS')
                   AND s.starts_at <= (now() AT TIME ZONE 'Europe/Paris')
                   AND s.ends_at > (now() AT TIME ZONE 'Europe/Paris')
             ), stream AS (

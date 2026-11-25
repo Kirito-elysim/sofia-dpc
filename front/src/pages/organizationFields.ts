@@ -8,6 +8,10 @@ export const fields=[
   [['billingName','Raison sociale de facturation'],['billingAddress','Adresse de facturation'],['billingZip','Code postal'],['billingCity','Ville'],['billingEmail','E-mail de facturation'],['billingPhone','Téléphone de facturation'],['numberTVA','N° TVA intracommunautaire'],['iban','IBAN'],['bic','BIC']],
   [['smsSender','Expéditeur SMS','Ex. SOFIADPC'],['emailFrom','E-mail d’envoi'],['replyEmail','E-mail de réponse'],['contactName','Nom du contact principal'],['contactPhone','Téléphone du contact']],
 ]
+export const organizationFormGroups = [
+  ...fields.slice(0,3),
+  fields[3].filter(([key]) => key === 'smsSender' || key === 'emailFrom'),
+]
 export const optional=['numberAPE','siret','legalForm','numberFormationDPC','addressExtra','url',...fields[2].map(([key])=>key)]
 export const options:Record<string,string[]>={legalForm:['Association','SAS','SASU','SARL','EURL','Entreprise individuelle','Autre']}
 export const types:Record<string,string>={email:'email',billingEmail:'email',replyEmail:'email',emailFrom:'email',url:'url',phone:'tel',billingPhone:'tel',contactPhone:'tel'}

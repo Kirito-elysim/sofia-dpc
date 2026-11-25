@@ -1,8 +1,9 @@
 import {useEffect,useState} from 'react'
 import {Link,useNavigate,useSearchParams} from 'react-router-dom'
 import {useQueryClient} from '@tanstack/react-query'
-import {ArrowLeft,ArrowRight,Building2,Calculator,Check,ChevronDown,Eye,FileText,ImageIcon,Mail,MessageSquare,Save,UploadCloud} from 'lucide-react'
+import {ArrowLeft,ArrowRight,Building2,Calculator,Check,Eye,FileText,ImageIcon,Mail,MessageSquare,Save,UploadCloud} from 'lucide-react'
 import {api,toApiError} from '../api'
+import {OrganizationFieldsForm} from './OrganizationFieldsForm'
 import {OrganizationDocuments} from './OrganizationDocuments'
 import {organizationDraft} from './organizationDraft'
 import './organization-wizard.css'
@@ -12,7 +13,7 @@ const steps=['Identification','Coordonnées','Facturation','Communications','Doc
 const descriptions=['Informations administratives (nom, code, SIREN ou SIRET, ANDPC…)','Adresse, responsables et contacts','Informations de facturation et bancaires','Expéditeurs des e-mails et SMS','Logo, cachet et documents administratifs (Kbis, Qualiopi, RIB, NDA…)']
 const subtitles=['Renseignez les informations administratives de l’organisme.','Renseignez les coordonnées et contacts de l’organisme.','Renseignez les informations de facturation de l’organisme.','Choisissez les expéditeurs des e-mails et des SMS.']
 const icons=[Building2,Building2,Calculator,Mail,ImageIcon]
-import {establishmentNumber, fieldHelp, fields, optional, options, organizationColors, types, docs} from './organizationFields'
+import {fieldHelp, organizationFormGroups, docs} from './organizationFields'
 
 function Attachment({name,label,file,onChange}:{name:string;label:string;file?:File;onChange:(file?:File)=>void}){
   return <div className={"ow-upload"+(file?" filled":"")} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(e.dataTransfer.files[0])onChange(e.dataTransfer.files[0])}}>
@@ -64,8 +65,6 @@ export default function OrganizationWizard({user}:{user:string}){
     billingPhone: values.phone ?? '',
   }
   const formValues: Record<string,string> = { ...billingDefaults, emailFrom: values.email ?? '', ...values }
-  const stepFields = step === 3 ? fields[step].filter(([key]) => key === 'smsSender' || key === 'emailFrom') : fields[step]
-  const isRequired = (key: string) => key !== 'smsSender' && !optional.includes(key)
   function formData(bodyValues: Record<string,string>){
     const body = new FormData()
     Object.entries(bodyValues).forEach(([key,value])=>body.append(key,value))
@@ -108,27 +107,7 @@ export default function OrganizationWizard({user}:{user:string}){
   return <section className="ow" data-step={step+1}><nav><Link to={path}><ArrowLeft aria-hidden="true"/>Organismes</Link></nav><header><i><Building2/></i><div><h1>{draftId?'Reprendre un organisme':'Créer un organisme'}</h1>{draftId&&<span className="org-draft-status">Brouillon</span>}<p>Ajoutez un nouvel organisme de formation (DPC) à la plateforme.</p></div></header>
     <div className="ow-layout"><div className="ow-left"><p className="ow-step-summary" aria-live="polite">Étape {step+1} sur {steps.length} · {steps[step]}</p>
     <form onSubmit={e=>{e.preventDefault();void submit()}}><fieldset disabled={busy||!ready}>
-    {step<4?<section className="ow-panel"><header><i><Icon/></i><div><h2>{steps[step]}</h2><p>{subtitles[step]}</p></div></header><div className={step===3?'ow-communications':''}><div><div className="ow-fields">{stepFields.map(([key,label,hint])=>key==='color'?
-      <div key={key} className="ow-color-field" role="group" aria-labelledby="ow-color-label" aria-describedby="ow-color-help">
-        <span id="ow-color-label">{label}</span>
-        <div className="ow-color-options">
-          {organizationColors.map(([value,name])=><label key={value} data-color={value}>
-            <input type="radio" name="color" value={value} checked={values.color===value} onChange={()=>update('color',value)}/>
-            <span className="ow-color-swatch" aria-hidden="true">{values.color===value&&<Check/>}</span>
-            <span>{name}</span>
-          </label>)}
-        </div>
-        <small id="ow-color-help" className="ow-field-help">{fieldHelp.color}</small>
-      </div>:<label key={key} className={['name','url','smsSender'].includes(key)?'wide':''}><span id={`ow-label-${key}`}>{label} {isRequired(key)&&<em>*</em>}</span>
-    {options[key]||key==='active'?
-      <div className="ow-select" data-status={key==='active'?values.active:undefined}>
-        <select name={key} aria-labelledby={`ow-label-${key}`} aria-describedby={`ow-help-${key}`} required={isRequired(key)} value={formValues[key]??''} onChange={e=>update(key,e.target.value)}>
-          {key==='active'?<><option value="1">Actif</option><option value="0">Inactif</option></>:<><option value="">Sélectionner…</option>{options[key].map(o=><option key={o}>{o}</option>)}</>}
-        </select>
-        <ChevronDown aria-hidden="true"/>
-      </div>:
-      <input name={key} aria-labelledby={`ow-label-${key}`} aria-describedby={`ow-help-${key}`} type={types[key]??'text'} required={isRequired(key)} placeholder={hint} value={formValues[key]??''} onChange={e=>update(key,key==='siret'?e.target.value.replace(/\s/g,''):e.target.value)}
-        {...(key==='siret'?{pattern:establishmentNumber.pattern,inputMode:establishmentNumber.inputMode,title:establishmentNumber.hint}:{maxLength:key==='numberAPE'?15:undefined,pattern:({code:'[A-Z0-9_]{2,20}',smsSender:'[A-Za-z0-9]{1,11}'} as Record<string,string>)[key]})}/>}<small id={`ow-help-${key}`} className="ow-field-help">{fieldHelp[key]}</small></label>)}</div>
+    {step<4?<section className="ow-panel"><header><i><Icon/></i><div><h2>{steps[step]}</h2><p>{subtitles[step]}</p></div></header><div className={step===3?'ow-communications':''}><div><div className="ow-fields"><OrganizationFieldsForm group={organizationFormGroups[step]} formValues={formValues} update={update}/></div>
     </div>
     {step===3&&<aside className="ow-preview" aria-label="Aperçu des messages">
       <h3><Eye aria-hidden="true"/> Aperçu des messages</h3>

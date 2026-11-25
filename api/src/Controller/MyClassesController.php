@@ -10,15 +10,20 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class MyClassesController extends AbstractController
 {
     /** Upcoming (today included) half-days of the logged-in trainer, soonest first. */
     #[Route('/api/me/classes', methods: 'GET')]
-    #[IsGranted('ROLE_FORMATEUR')]
     public function __invoke(#[CurrentUser] User $user, EntityManagerInterface $em): JsonResponse
     {
+        if (!$user->hasTrainerAccess()) {
+            throw $this->createAccessDeniedException();
+        }
+        // Own slots are visible whatever organizations the account manages.
+        if ($em->getFilters()->isEnabled('organization_scope')) {
+            $em->getFilters()->disable('organization_scope');
+        }
         /** @var list<ClassSlot> $slots */
         $slots = $em->createQuery('SELECT s, c, ts FROM '.ClassSlot::class.' s JOIN s.virtualClass c JOIN s.timeSlot ts
             WHERE s.trainer = :t AND c.date >= :today AND c.status != :cancelled ORDER BY c.date, ts.startTime')

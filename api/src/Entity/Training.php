@@ -18,11 +18,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new GetCollection(), new Get(),
-        new Post(security: "is_granted('ROLE_ADMIN')"),
-        new Patch(security: "is_granted('ROLE_ADMIN')"),
-        new Delete(security: "is_granted('ROLE_ADMIN')", processor: SoftDeleteProcessor::class),
+        new Post(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAININGS')"),
+        new Patch(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAININGS')"),
+        new Delete(security: "is_granted('SOFIA_EDIT_TRAININGS')", processor: SoftDeleteProcessor::class),
     ],
-    security: "is_granted('ROLE_LECTURE')",
+    security: "is_granted('SOFIA_TRAININGS')",
     normalizationContext: ['groups' => ['read']],
     denormalizationContext: ['groups' => ['write']],
 )]

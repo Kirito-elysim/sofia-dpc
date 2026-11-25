@@ -31,10 +31,9 @@
 .od-dialog header > .od-dialog-icon{width:28px;height:28px;flex:none;color:#c62537}
 .od-dialog .oa-caution > svg{width:20px;height:20px;flex:none}
 .od-dialog.confirm footer .danger{border-color:#c62537;background:#c62537;color:white;gap:8px}
-.org-directory .od-dialog.confirm footer button > svg{width:16px;height:16px;flex:none}
+.oa-dialog.od-dialog.confirm footer button > svg{width:16px;height:16px;flex:none}
 .od-menu{position:absolute;top:.7vw;right:.6vw}.od-menu .od-actions{position:absolute;right:0;background:white;padding:8px;border:1px solid #dae0ea;border-radius:10px;box-shadow:0 4px 16px #2233}
 .od-pages{justify-content:space-between;margin-top:2vw}.od-pages>div{gap:8px}.od-pages :is(b,button){display:grid;place-items:center;min-width:35px;height:34px}.od-pages button:disabled{opacity:.48}
-.od-cards.compact .od-logo{display:none}.od-cards.compact article{padding:.8vw 1.2vw}.od-cards.compact footer{margin-top:.3vw}
 @container(max-width:760px){.od-stats{grid-template-columns:1fr 1fr}.od-fields,.od-filters{flex-wrap:wrap}.od-fields aside{width:auto}.od-logo{width:18%}.od-filters label,.od-filters label:nth-child(2){width:38%}.od-fields>div{min-width:40%}}
 
 
@@ -55,7 +54,6 @@
   .od-fields aside span { padding-block: 2px }
   .od-cards footer { margin-top: 10px; padding: 5px 8px; font-size: 14px }
   .od-actions :is(a,button) { padding: 5px 10px }
-  .od-cards.compact article { padding: 10px 16px }
   .od-pages { margin-top: 18px }
 }
 
@@ -65,3 +63,50 @@
 .od-drafts article>svg{color:var(--accent)}
 .od-drafts h2{margin:0;font-size:16px;font-weight:650;overflow-wrap:anywhere}
 .od-drafts a{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:6px 10px;border:1px solid var(--card-border);border-radius:7px;background:white;color:var(--accent)}
+
+.od-dialog h2{overflow-wrap:anywhere;min-width:0}
+.od-dialog.confirm footer{flex-wrap:wrap}
+.od-dialog button:disabled{opacity:.6;cursor:default}
+
+.oa-dialog.od-dialog.confirm{width:min(560px,calc(100% - 2rem))}
+.od-dialog .oa-caution{display:grid;justify-items:center;gap:6px;margin:12px 20px;text-align:center}
+.od-dialog .oa-caution p{margin:0;font-size:.9em}
+.od-delete-confirmation{display:grid;gap:8px;margin:12px 20px;padding:12px;border:1px solid #d5e4fa;background:#edf4ff;border-radius:8px}
+.od-delete-confirmation label{display:flex;align-items:center;gap:8px;font-weight:650}
+.od-delete-confirmation label svg{width:18px;height:18px;color:#005aff;flex:none}
+.od-delete-confirmation input{box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid #93add4;border-radius:6px;background:white;color:inherit}
+.od-delete-confirmation input:focus-visible{outline:2px solid #005aff;outline-offset:1px}
+
+.org-directory .od-filters :is(input,select):focus{outline:none;box-shadow:none}
+.od-filters label:focus-within{border-color:#879ab7;background:#f8faff}
+.od-filters label:has(:focus-visible){box-shadow:0 0 0 2px #dce5f2}
+.od-table-wrap{overflow:auto;border:1px solid var(--card-border);border-radius:var(--card-radius);background:#fff;box-shadow:var(--card-shadow)}
+.od-table{width:100%;border-collapse:collapse;font-size:14px;text-align:left}
+.od-table-wrap.oa :is(th,td){padding:6px 12px}.od-table-wrap.oa tbody th{text-align:left;background:transparent}.od-table-wrap.oa thead th:first-child{text-align:left}
+.od-table thead th{white-space:nowrap}
+.od-table tbody tr:last-child>*{border-bottom:0}
+.od-table tbody tr:hover{background:#f8faff}
+.od-table th[scope="row"]{min-width:145px;font-weight:650;overflow-wrap:anywhere}
+.od-table .od-actions{gap:6px;white-space:nowrap}
+.od-table .od-actions :is(a,button){padding:4px 8px;font-size:12px}
+.od-table-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:#eef0f4;color:#475569;font-size:13px;font-weight:650;white-space:nowrap}
+.od-table-status::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.od-table-status[data-active="true"]{background:#e4f8e9;color:#087d33}
+.od-empty{display:grid;justify-items:center;gap:8px;padding:28px 16px;text-align:center;border:1px dashed #cbd7ea;border-radius:var(--card-radius);background:var(--card-gradient)}
+.od-empty i{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e4edfc;color:#305988}
+.od-empty h2{margin:0;font-size:18px}
+.od-empty p{margin:0;color:#465977}
+.org-directory .od-empty button{margin-top:4px;padding:7px 12px;border:1px solid #b9cae6;border-radius:7px;background:white;color:#184d94;font-weight:650}
+
+
+.od-table tbody tr:nth-child(even){background:#fafbfd}
+.od-table tbody tr:focus-within,.od-table tbody tr:hover{background:#f1f6ff}
+.od-table .od-table-count{text-align:center;width:1%;font-variant-numeric:tabular-nums}
+.od-table .od-table-actions{text-align:left;width:294px}.od-table-wrap:has(.directory-row-actions) .od-table{min-width:650px}
+.od-table .od-actions{justify-content:flex-end}
+.od-table .od-actions :is(a,button){min-width:32px;min-height:32px;justify-content:center}
+.od-table .od-actions :is(a,button):hover{background:#edf4ff}
+.od-table .od-actions .od-delete:hover{background:#fff1f3}
+.od-table-code{display:inline-block;padding:3px 7px;border-radius:5px;background:#eef2f8;color:#354963;font-size:12px;font-weight:650;white-space:nowrap}
+.od-table-status::before{content:none}
+.od-body small{display:inline-flex;align-items:center;gap:6px;color:#475569}

@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 #[AsDoctrineListener(event: Events::postFlush)]
 final class AuditListener
 {
-    private const SKIP_FIELDS = ['password', 'plainPassword'];
+    private const SKIP_FIELDS = ['password', 'plainPassword', 'profilePhoto'];
 
     /** @var list<array{string, object, ?int, array<string, mixed>}> */
     private array $pending = [];

@@ -44,7 +44,19 @@ class EnrollmentService
             if (false !== $teachesHere) {
                 throw new EnrollmentException('TRAINER_ASSIGNED_TO_CLASS', 'Cette personne anime un créneau de cette classe et ne peut pas y être inscrite comme apprenant.', 409);
             }
-            $ps = $this->em->getRepository(Participant::class)->findOneBy(['email' => $email]);
+            // Participant identity is shared across organizations. Only enrollments are scoped here.
+            $filters = $this->em->getFilters();
+            $scoped = $filters->isEnabled('organization_scope');
+            if ($scoped) {
+                $filters->suspend('organization_scope');
+            }
+            try {
+                $ps = $this->em->getRepository(Participant::class)->findOneBy(['email' => $email]);
+            } finally {
+                if ($scoped) {
+                    $filters->restore('organization_scope');
+                }
+            }
             if (null === $ps) {
                 $input->email = $email;
                 $ps = $input;

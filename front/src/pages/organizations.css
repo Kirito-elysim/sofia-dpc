@@ -12,3 +12,10 @@
 .org-admin:has(.drawer[open]) .oa-table table{table-layout:auto}.org-admin:has(.drawer[open]) .oa-table th{width:auto}.org-admin:has(.drawer[open]) .oa-table :is(td,th){padding-inline:.42vw}.org-admin:has(.drawer[open]) .oa-actions button{padding:.42em .48em}.org-admin:has(.drawer[open]) .oa-actions{gap:.3em}
 
 }
+
+.oa .directory-row-actions{display:grid;grid-template-columns:max-content 104px max-content;gap:4px;justify-content:start}
+.oa .directory-row-actions > :is(a,button){display:inline-flex;align-items:center;justify-content:center;gap:.6em;padding:.45em .7em;border-radius:.7em;white-space:nowrap;font-weight:550}
+.oa .directory-row-actions > a{background:#f0f7ff;color:#0048ee}
+.oa .directory-row-actions > .red{background:#ffe8e8;color:#d10b0b}
+
+.oa .directory-row-actions > button:nth-child(2){box-sizing:border-box;width:100%}

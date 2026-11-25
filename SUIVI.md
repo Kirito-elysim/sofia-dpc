@@ -59,8 +59,10 @@ Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : 
 - 2026-11-24 : initialisation du dépôt, socle API/front, système d'inscription + mail de confirmation (Mailpit vérifié de bout en bout).
 
 - [x] Compte formateur (ROLE_FORMATEUR) + « Mes classes » (2026-11-24)
+- [x] Accès formateur géré depuis la fiche, cumul avec un compte de gestion (2026-11-25)
 - [ ] Rôles staff par organisme (ex. ADMIN sur SOFIA, LECTURE sur PHOCEA) : non fait, à confirmer avec le client
 
 - 2026-11-24 (3) : Ouverture externe chez Zoom, plusieurs comptes hôtes, OAuth par profil et cache Redis, réservation transactionnelle multi-créneaux, worker de provisionnement, alerte de saturation et planning connecté. Voir le bilan détaillé dans HANDOFF.md pour les contrôles et les limites de recette.
 
 - Suivi en direct : cumul de présence par apprenant sur les créneaux en cours, fusion multi-appareils et signalement visuel après dix minutes de déconnexion. Test fonctionnel PostgreSQL avec webhooks simulés. Recette Zoom réelle en attente.
+- [x] Se connecter en tant que, depuis Utilisateurs et Formateurs (2026-11-25)

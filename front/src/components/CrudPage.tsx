@@ -27,7 +27,7 @@ export type Field = {
   readOnlyOnEdit?: boolean
 }
 
-type Props = { renderList?: (rows: Row[], open: (row: Row | 'new') => void) => ReactNode; title: string; path: string; fields: Field[]; canWrite: boolean; canDelete?: boolean; empty?: string; defaults?: Record<string, unknown> }
+type Props = { preparePayload?: (payload: Record<string, unknown>) => Record<string, unknown>; renderList?: (rows: Row[], open: (row: Row | 'new') => void) => ReactNode; title: string; path: string; fields: Field[]; canWrite: boolean; canDelete?: boolean; empty?: string; defaults?: Record<string, unknown> }
 
 const inputCls = 'w-full rounded border border-slate-300 px-3 py-2 text-sm'
 
@@ -69,7 +69,7 @@ function cell(f: Field, r: Row): string {
   return String(v ?? '')
 }
 
-export default function CrudPage({ title, path, fields, canWrite, canDelete = true, renderList, empty = 'Aucun élément.', defaults = {} }: Props) {
+export default function CrudPage({ title, path, fields, canWrite, canDelete = true, preparePayload, renderList, empty = 'Aucun élément.', defaults = {} }: Props) {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<Row | 'new' | null>(null)
   const [values, setValues] = useState<Record<string, unknown>>({})
@@ -87,7 +87,8 @@ export default function CrudPage({ title, path, fields, canWrite, canDelete = tr
   const save = useMutation({
     mutationFn: () => {
       const creating = editing === 'new'
-      const body = JSON.stringify(toPayload(fields, values, creating))
+      const payload = toPayload(fields, values, creating)
+      const body = JSON.stringify(preparePayload ? preparePayload(payload) : payload)
       return creating
         ? api(`/${path}`, { method: 'POST', body })
         : api(`/${path}/${(editing as Row).id}`, { method: 'PATCH', body, headers: { 'Content-Type': 'application/merge-patch+json' } })

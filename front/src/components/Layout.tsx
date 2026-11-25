@@ -1,19 +1,32 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { Activity, Bell, Building2, CalendarDays, ChartNoAxesColumn, ChevronDown, ClipboardList, Clock, CreditCard, FileText, GraduationCap, House, CircleHelp, Mail, Monitor, Settings, UserRound, Users, Video, type LucideIcon } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, Settings, ShieldCheck, UserRound, Users, Video, type LucideIcon } from 'lucide-react'
 import { NavLink, Outlet, useMatch } from 'react-router-dom'
-import { api, type Me } from '../api'
+import { api, impersonate, type Me } from '../api'
 import '../planning.css'
 import './navigation.css'
 
-type Entry = [LucideIcon, string, string?]
-const main: Entry[] = [[House,'Tableau de bord','/dashboard'],[CalendarDays,'Planning','/planning'],[Monitor,'Classes','/classes'],[Users,'Participants (PS)','/learners'],[ClipboardList,'Attestations'],[Activity,'Suivi en direct','/live']]
-const settings: Entry[] = [[Building2,'Organismes','/settings/organizations'],[GraduationCap,'Formations','/settings/trainings'],[Clock,'Créneaux','/settings/time-slots'],[UserRound,'Formateurs','/settings/trainers'],[Video,'Configurations des classes virtuelles','/settings/virtual-class-configs'],[Video,'Comptes Zoom','/settings/zoom-accounts'],[Users,'Utilisateurs et rôles','/settings/users'],[Mail,'Modèles de messages','/settings/message-templates']]
+type Entry = [LucideIcon, string, string, string]
+const main: Entry[] = [
+  [House,'Tableau de bord','/dashboard','DASHBOARD'], [CalendarDays,'Planning','/planning','PLANNING'],
+  [Monitor,'Classes','/classes','CLASSES'], [Users,'Participants (PS)','/learners','LEARNERS'],
+  [Activity,'Suivi en direct','/live','LIVE'],
+]
+const settings: Entry[] = [
+  [GraduationCap,'Formations','/settings/trainings','TRAININGS'], [Clock,'Créneaux','/settings/time-slots','TIME_SLOTS'],
+  [UserRound,'Formateurs','/settings/trainers','TRAINERS'], [Mail,'Modèles de messages','/settings/message-templates','GLOBAL'],
+]
+const administration: Entry[] = [
+  [Building2,'Organismes','/settings/organizations','ORGANIZATIONS'],
+  [Users,'Utilisateurs','/settings/users','GLOBAL'], [ShieldCheck,'Rôles et permissions','/settings/roles','GLOBAL'],
+  [Video,'Configurations des classes virtuelles','/settings/virtual-class-configs','CONFIGS'],
+  [Video,'Comptes Zoom','/settings/zoom-accounts','GLOBAL'],
+]
 
 const navIcons: Record<string,string> = {
   'Tableau de bord':'home', Planning:'planning', Classes:'classes', 'Participants (PS)':'people', Attestations:'cert', 'Suivi en direct':'live',
   Organismes:'organization', Formations:'education', Créneaux:'clock', Formateurs:'person', 'Comptes Zoom':'zoom',
-  'Utilisateurs et rôles':'users', 'Modèles de messages':'mail', 'Journal d’audit':'audit',
+  Utilisateurs:'users', 'Modèles de messages':'mail', 'Journal d’audit':'audit',
 }
 function navigation([Icon,label,to]: Entry) {
   const content = <>{navIcons[label] ? <img className="nav-picto" alt="" src={'/catalog/'+navIcons[label]+'.png'}/> : <Icon/>}{label}</>
@@ -28,14 +41,33 @@ export default function Layout({me}: {me: Me}) {
   const dashboard = useMatch("/dashboard")
   const [organization, setOrganization] = useState("Tous")
   const qc = useQueryClient()
+  const logout = useMutation({
+    mutationFn: () => api('/auth/logout', {method:'POST'}),
+    onSuccess: async () => {
+      await qc.cancelQueries()
+      qc.setQueryData(['me'], null)
+      qc.removeQueries({predicate: query => query.queryKey[0] !== 'me'})
+    },
+  })
+  const leave = useMutation({mutationFn: () => impersonate('exit')})
   const trainer = me.roles.includes('ROLE_FORMATEUR')
-  const role = me.roles.find(r => r !== 'ROLE_USER')?.replace('ROLE_', '').replaceAll('_',' ').toLowerCase()
+  const global = me.roles.includes('ROLE_SUPER_ADMIN')
+  const allowed = ([,,,permission]: Entry) => global || (me.permissions?.includes(permission) ?? false)
+  const visibleSettings = settings.filter(allowed)
+  const visibleAdmin = administration.filter(allowed)
+  const role = me.roleName ?? me.roles.find(r => r !== 'ROLE_USER')?.replace('ROLE_', '').replaceAll('_',' ').toLowerCase()
   return <div className={dashboard ? "sofia-shell dashboard-shell" : heading ? "sofia-shell organizations-shell" : planning ? "sofia-shell planning-shell" : "sofia-shell"}><aside className="sofia-side">
-    <img className="brand" src="/catalog/brand.png" alt="SOFIA – Classes virtuelles DPC"/>
-    <nav>{trainer ? navigation([Monitor,'Mes classes','/my-classes']) : <>
-      {main.map(navigation)}
-      <details open><summary><Settings/>Paramétrage <ChevronDown/></summary>{settings.filter(([, ,to])=>to==='/settings/virtual-class-configs' ? me.roles.includes('ROLE_ADMIN') : !['/settings/users','/settings/zoom-accounts'].includes(to??'') || me.roles.includes('ROLE_SUPER_ADMIN')).map(navigation)}</details>
-      {me.roles.includes('ROLE_ADMIN')&&navigation([ClipboardList,'Journal d’audit','/audit'])}
-      <div className="future">{([[ChartNoAxesColumn,'Analytique'],[CreditCard,'Facturation'],[FileText,'Documents DPC']] as Entry[]).map(([Icon,label])=><span key={label} aria-disabled="true"><Icon/>{label}<small>Bientôt</small></span>)}</div>
-    </>}</nav></aside><div className="sofia-body"><header className="sofia-top"><CircleHelp/><Bell/><i/><b>{me.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</b><details><summary><span><strong>{me.name}</strong><br/>{role}</span><ChevronDown/></summary><button onClick={async()=>{await api('/auth/logout',{method:'POST'});qc.setQueryData(['me'],null)}}>Déconnexion</button></details></header><main className="sofia-main"><Outlet context={{organization,setOrganization}}/></main></div></div>
+    <img className="brand" src="/catalog/sofia-navigation-logo.png" width={2172} height={724} alt="SOFIA – Classes virtuelles DPC"/>
+    <nav>{trainer ? navigation([Monitor,'Mes classes','/my-classes','']) : <>
+      {main.filter(allowed).map(navigation)}
+      {me.trainer&&navigation([Monitor,'Mes classes','/my-classes',''])}
+      {visibleSettings.length>0&&<details open><summary><Settings/>Paramétrage <ChevronDown/></summary>{visibleSettings.map(navigation)}</details>}
+      {visibleAdmin.length>0&&<details open><summary><ShieldCheck/>Administration <ChevronDown/></summary>{visibleAdmin.map(navigation)}</details>}
+      {global&&navigation([ClipboardList,'Journal d’audit','/audit','GLOBAL'])}
+    </>}</nav></aside><div className="sofia-body"><header className="sofia-top"><CircleHelp/><Bell/><i/><b>{me.profilePhoto?<img src={me.profilePhoto} alt=""/>:me.name.split(' ').map(n=>n[0]).slice(0,2).join('')}</b><details><summary><span><strong>{me.name}</strong><br/>{role}</span><ChevronDown/></summary><div className="sofia-account-actions">
+      <button type="button" disabled={logout.isPending} onClick={()=>logout.mutate()}>
+        <LogOut aria-hidden="true"/>{logout.isPending?'Déconnexion…':'Déconnexion'}
+      </button>
+      {logout.isError&&<p role="alert">La déconnexion a échoué. Réessaie.</p>}
+    </div></details></header><main className="sofia-main">{me.impersonator&&<div className="impersonation" role="status"><span>Vous êtes connecté en tant que <strong>{me.name}</strong>.</span><button type="button" disabled={leave.isPending} onClick={()=>leave.mutate()}>Revenir à mon compte ({me.impersonator})</button>{leave.error&&<span role="alert">{leave.error.message}</span>}</div>}<Outlet context={{organization,setOrganization}}/></main></div></div>
 }

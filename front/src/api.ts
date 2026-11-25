@@ -29,7 +29,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T
 }
 
-export type Me = { email: string; name: string; roles: string[] }
+/** Full reload: nothing cached for one account may be shown to the other. */
+export async function impersonate(userId: number | 'exit') {
+  await api(`/auth/impersonate/${userId}`, { method: 'POST' })
+  window.location.assign('/')
+}
+
+export type Me = { impersonator?: string | null; trainer?: boolean; permissions?: string[]; roleName?: string | null; profilePhoto?: string | null; mustChangePassword?: boolean; email: string; name: string; roles: string[] }
 export type VirtualClass = {
   id: number
   date: string
