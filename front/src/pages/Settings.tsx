@@ -8,7 +8,6 @@ import UserDirectory from './UserDirectory'
 import Catalog from './Catalog'
 
 const orgLabel = (o: Record<string, string>) => o.name
-const trainingLabel = (t: Record<string, string>) => t.title
 
 const trainings: Field[] = [
   { name: 'organization', label: 'Organisme', type: 'select', required: true, relation: { path: 'organizations', label: orgLabel } },
@@ -19,30 +18,12 @@ const trainings: Field[] = [
   { name: 'defaultCapacity', label: 'Capacité par défaut (PS)', type: 'number', required: true },
 ]
 
-const timeSlots: Field[] = [
-  { name: 'label', label: 'Libellé', required: true },
-  { name: 'startTime', label: 'Début', type: 'time', required: true },
-  { name: 'endTime', label: 'Fin', type: 'time', required: true },
-  { name: 'durationMin', label: 'Durée (min)', show: (r) => String(r.durationMin), tableOnly: true },
-]
 
-const trainers: Field[] = [
-  { name: 'civility', label: 'Civilité', type: 'select', options: ['Dr','Pr','Mme','M.'].map(value=>({value,label:value})) },
-  { name: 'organization', label: 'Organisme', type: 'select', relation: {path:'organizations',label:orgLabel} },
-  { name: 'specialty', label: 'Spécialité' },
-  { name: 'comments', label: 'Commentaires (optionnel)' },
-  { name: 'lastName', label: 'Nom', required: true },
-  { name: 'firstName', label: 'Prénom', required: true },
-  { name: 'email', label: 'E-mail', type: 'email', required: true },
-  { name: 'phone', label: 'Téléphone' },
-  { name: 'trainings', label: 'Formations assurées', type: 'multi', relation: { path: 'trainings', label: trainingLabel }, show: (r) => (r.trainings as { title: string }[]).map((t) => t.title).join(', ') },
-]
 
 
 
 export const Trainings = ({ canWrite }: { canWrite: boolean }) => <Catalog title="Formations" path="trainings" fields={trainings} canWrite={canWrite} defaults={{ defaultCapacity: 20 }} />
-export const TimeSlots = ({ canWrite }: { canWrite: boolean }) => <CrudPage title="Créneaux" path="time-slots" fields={timeSlots} canWrite={canWrite} />
-export const Trainers = ({ canWrite }: { canWrite: boolean }) => <Catalog title="Formateurs" path="trainers" fields={trainers} canWrite={canWrite} />
+export const Trainers = ({ canWrite }: { canWrite: boolean }) => <Catalog title="Formateurs" path="trainers" fields={[]} canWrite={canWrite} />
 // Users are deactivated, never deleted (audit trail).
 export function Users() {
   const customRoles=useCustomRoles()

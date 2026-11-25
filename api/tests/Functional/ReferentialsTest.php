@@ -186,7 +186,7 @@ class ReferentialsTest extends WebTestCase
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
         $training = $this->call('POST', '/api/trainings', ['title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
-        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Test', 'lastName' => 'Zoom', 'email' => 'trainer@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Test', 'lastName' => 'Zoom', 'email' => 'trainer@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $slots = [];
         foreach ([['Matin', '09:00', '13:00'], ['Après-midi', '14:00', '17:00']] as [$label, $startTime, $endTime]) {
             $slots[] = ['trainerId' => $trainer, 'timeSlotId' => $this->call('POST', '/api/time-slots', compact('label', 'startTime', 'endTime'))['id']];
@@ -213,7 +213,7 @@ class ReferentialsTest extends WebTestCase
         $this->assertSame('pending', $calendar['slots'][0]['zoomState']);
         $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom 2', 'profile' => 'SECOND', 'hostUserId' => 'other-host']);
         $this->assertResponseStatusCodeSame(201);
-        $otherTrainer = $this->call('POST', '/api/trainers', ['firstName' => 'Autre', 'lastName' => 'Test', 'email' => 'second@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $otherTrainer = $this->call('POST', '/api/trainers', ['firstName' => 'Autre', 'lastName' => 'Test', 'email' => 'second@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         foreach ($body['slots'] as $index => $slot) {
             $body['slots'][$index]['trainerId'] = $otherTrainer;
         }
@@ -233,7 +233,7 @@ class ReferentialsTest extends WebTestCase
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
         $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
-        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
         $configPayload=['name'=>'Politique organisme','hosts'=>[$host],'organizations'=>[$org],
@@ -299,7 +299,7 @@ class ReferentialsTest extends WebTestCase
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
         $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
-        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'trainings' => ["/api/trainings/$training"]])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
         $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','trainingId' => $training,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
@@ -453,9 +453,9 @@ class ReferentialsTest extends WebTestCase
         $t = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation fictive', 'defaultCapacity' => 20]);
         $this->assertResponseStatusCodeSame(201);
 
-        $tr = $this->call('POST', '/api/trainers', ['firstName' => 'Jean', 'lastName' => 'Test', 'email' => 'j@example.test', 'trainings' => ["/api/trainings/{$t['id']}"]]);
+        $tr = $this->call('POST', '/api/trainers', ['firstName' => 'Jean', 'lastName' => 'Test', 'email' => 'j@example.test', 'organizations' => ["/api/organizations/$org"]]);
         $this->assertResponseStatusCodeSame(201);
-        $this->assertCount(1, $tr['trainings']);
+        $this->assertCount(1, $tr['organizations']);
 
         $slot = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00']);
         $this->assertSame(240, $slot['durationMin']);
@@ -464,7 +464,7 @@ class ReferentialsTest extends WebTestCase
 
         $this->call('DELETE', "/api/organizations/$org");
         $this->assertResponseStatusCodeSame(204);
-        $this->assertCount(1, $this->call('GET', "/api/trainers/{$tr['id']}")['trainings']);
+        $this->assertCount(1, $this->call('GET', "/api/trainers/{$tr['id']}")['organizations']);
 
         foreach (['trainings' => $t['id'], 'trainers' => $tr['id'], 'time-slots' => $slot['id']] as $resource => $id) {
             $this->call('DELETE', "/api/$resource/$id");
@@ -681,5 +681,62 @@ class ReferentialsTest extends WebTestCase
         $this->loginAs('ADMIN');
         $this->call('POST', "/api/users/$id/access");
         $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testTrainerSheetDocumentsAndSharedScope(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $a = $this->org();
+        $b = $this->call('POST', '/api/organizations', ['name' => 'PHOCEA', 'code' => 'PHOCEA', 'emailFrom' => 'p@example.test'])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Lea', 'lastName' => 'Test', 'email' => 'lea@example.test', 'profession' => 'Médecin',
+            'rppsNumber' => '10101234567', 'formats' => ['VIRTUAL_CLASS'], 'biography' => 'Bio', 'organizations' => ["/api/organizations/$a", "/api/organizations/$b"]]);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertCount(2, $trainer['organizations']);
+        $id = $trainer['id'];
+        $this->call('PATCH', "/api/trainers/$id", ['formats' => ['AUTRE']]);
+        $this->assertResponseStatusCodeSame(422);
+
+        $path = tempnam(sys_get_temp_dir(), 'cv');
+        file_put_contents($path, "%PDF-1.4\n%fictif\n");
+        $this->client->request('POST', "/api/trainers/$id/documents/cv", [], ['file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($path, 'cv.pdf', null, null, true)]);
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame([['kind' => 'cv', 'name' => 'cv.pdf']], $this->call('GET', "/api/trainers/$id/documents"));
+
+        // An admin of one organization sees the shared trainer but cannot change it or read the documents.
+        $admin = $this->loginAs('ADMIN');
+        $admin->addOrganization($this->em()->getRepository(\App\Entity\Organization::class)->find($a));
+        $this->em()->flush();
+        $this->client->loginUser($admin);
+        $this->assertContains($id, array_column($this->call('GET', '/api/trainers'), 'id'));
+        $this->call('PATCH', "/api/trainers/$id", ['biography' => 'Autre']);
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('GET', "/api/trainers/$id/documents");
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('DELETE', "/api/trainers/$id");
+        $this->assertResponseStatusCodeSame(403);
+        $this->assertSame(2, (int) $this->em()->getConnection()->fetchOne('SELECT count(*) FROM trainer_organization WHERE trainer_id = ?', [$id]));
+    }
+
+    public function testUsedOrInactiveTimeSlotCannotBeDeletedOrBooked(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $training = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation'])['id'];
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'a@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
+        $slot = $this->call('POST', '/api/time-slots', ['label' => 'Soir', 'startTime' => '18:00', 'endTime' => '20:00']);
+        $this->assertTrue($slot['active']);
+        $this->call('PATCH', "/api/time-slots/{$slot['id']}", ['active' => false]);
+        $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03', 'trainingId' => $training, 'dpcAction' => 'A', 'dpcSession' => 'S', 'slots' => [['timeSlotId' => $slot['id'], 'trainerId' => $trainer]]]);
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertSame([], $this->call('GET', '/api/time-slot-usage'));
+
+        $em = $this->em();
+        $class = new \App\Entity\VirtualClass($em->getRepository(\App\Entity\Training::class)->find($training), new \DateTimeImmutable('+3 days'));
+        $em->persist($class);
+        $em->persist(new \App\Entity\ClassSlot($class, $em->getRepository(\App\Entity\TimeSlot::class)->find($slot['id']), $em->getRepository(\App\Entity\Trainer::class)->find($trainer)));
+        $em->flush();
+        $this->assertSame([$slot['id']], $this->call('GET', '/api/time-slot-usage'));
+        $this->call('DELETE', "/api/time-slots/{$slot['id']}");
+        $this->assertResponseStatusCodeSame(409);
     }
 }

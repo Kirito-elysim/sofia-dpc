@@ -69,7 +69,8 @@ final class UserProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('Rattachez cet utilisateur à au moins un organisme.');
         }
         // A staff account may also teach for an organization it does not manage.
-        if ('ROLE_FORMATEUR' === $data->getRole() && $data->trainer && $data->trainer->organization && !$data->organizations->contains($data->trainer->organization)) {
+        if ('ROLE_FORMATEUR' === $data->getRole() && $data->trainer && !$data->trainer->getOrganizations()->isEmpty()
+            && !$data->trainer->getOrganizations()->exists(static fn ($key, $organization) => $data->organizations->contains($organization))) {
             throw new UnprocessableEntityHttpException('Le formateur doit appartenir à un organisme rattaché au compte.');
         }
 

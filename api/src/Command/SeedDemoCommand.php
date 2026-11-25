@@ -36,6 +36,8 @@ class SeedDemoCommand extends Command
             $this->em->persist($o);
         }
         $trainer = new Trainer('Camille', 'Demo', 'formateur@example.test');
+        $trainer->addOrganization($sofia);
+        $trainer->addOrganization($phocea);
         $slots = [new TimeSlot('Matin', '09:00', '13:00'), new TimeSlot('Après-midi', '14:00', '17:00')];
         foreach ([$trainer, ...$slots] as $o) {
             $this->em->persist($o);

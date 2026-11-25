@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, Settings, ShieldCheck, UserRound, Users, Video, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, Settings, ShieldCheck, SlidersHorizontal, UserCog, UserRound, UsersRound, Video, type LucideIcon } from 'lucide-react'
 import { NavLink, Outlet, useMatch } from 'react-router-dom'
 import { api, impersonate, type Me } from '../api'
 import '../planning.css'
@@ -9,7 +9,7 @@ import './navigation.css'
 type Entry = [LucideIcon, string, string, string]
 const main: Entry[] = [
   [House,'Tableau de bord','/dashboard','DASHBOARD'], [CalendarDays,'Planning','/planning','PLANNING'],
-  [Monitor,'Classes','/classes','CLASSES'], [Users,'Participants (PS)','/learners','LEARNERS'],
+  [Monitor,'Classes','/classes','CLASSES'], [UsersRound,'Participants (PS)','/learners','LEARNERS'],
   [Activity,'Suivi en direct','/live','LIVE'],
 ]
 const settings: Entry[] = [
@@ -18,18 +18,13 @@ const settings: Entry[] = [
 ]
 const administration: Entry[] = [
   [Building2,'Organismes','/settings/organizations','ORGANIZATIONS'],
-  [Users,'Utilisateurs','/settings/users','GLOBAL'], [ShieldCheck,'Rôles et permissions','/settings/roles','GLOBAL'],
-  [Video,'Configurations des classes virtuelles','/settings/virtual-class-configs','CONFIGS'],
+  [UserCog,'Utilisateurs','/settings/users','GLOBAL'], [ShieldCheck,'Rôles et permissions','/settings/roles','GLOBAL'],
+  [SlidersHorizontal,'Configurations des classes virtuelles','/settings/virtual-class-configs','CONFIGS'],
   [Video,'Comptes Zoom','/settings/zoom-accounts','GLOBAL'],
 ]
 
-const navIcons: Record<string,string> = {
-  'Tableau de bord':'home', Planning:'planning', Classes:'classes', 'Participants (PS)':'people', Attestations:'cert', 'Suivi en direct':'live',
-  Organismes:'organization', Formations:'education', Créneaux:'clock', Formateurs:'person', 'Comptes Zoom':'zoom',
-  Utilisateurs:'users', 'Modèles de messages':'mail', 'Journal d’audit':'audit',
-}
 function navigation([Icon,label,to]: Entry) {
-  const content = <>{navIcons[label] ? <img className="nav-picto" alt="" src={'/catalog/'+navIcons[label]+'.png'}/> : <Icon/>}{label}</>
+  const content = <><Icon className="nav-picto" aria-hidden="true"/>{label}</>
   return to ? <NavLink key={label} to={to}>{content}</NavLink> : <span key={label} aria-disabled="true">{content}</span>
 }
 

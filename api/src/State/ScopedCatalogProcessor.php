@@ -30,20 +30,25 @@ final class ScopedCatalogProcessor implements ProcessorInterface
         $user->email = $trainer->email;
         $user->name = mb_substr($trainer->firstName.' '.$trainer->lastName, 0, 150);
         $user->organizations->clear();
-        if ($trainer->organization) {
-            $user->addOrganization($trainer->organization);
+        foreach ($trainer->getOrganizations() as $organization) {
+            $user->addOrganization($organization);
         }
-        $user->organization = $trainer->organization;
+        $user->organization = $user->organizations->first() ?: null;
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
-        $this->scope->require($data->organization?->getId());
         if ($data instanceof \App\Entity\Trainer) {
-            foreach ($data->getTrainings() as $training) {
-                $this->scope->require($training->organization->getId());
+            if ($data->getId()) {
+                $this->scope->requireTrainer($data);
             }
+            foreach ($data->getOrganizations()->isEmpty() ? [null] : $data->getOrganizations() as $organization) {
+                $this->scope->require($organization?->getId());
+            }
+            $data->updatedAt = new \DateTimeImmutable();
             $this->syncAccount($data);
+        } else {
+            $this->scope->require($data->organization?->getId());
         }
         return $this->persist->process($data, $operation, $uriVariables, $context);
     }

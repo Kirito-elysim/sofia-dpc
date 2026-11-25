@@ -66,3 +66,5 @@ Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : 
 
 - Suivi en direct : cumul de présence par apprenant sur les créneaux en cours, fusion multi-appareils et signalement visuel après dix minutes de déconnexion. Test fonctionnel PostgreSQL avec webhooks simulés. Recette Zoom réelle en attente.
 - [x] Se connecter en tant que, depuis Utilisateurs et Formateurs (2026-11-25)
+- [x] Page formateur selon la maquette, plusieurs organismes, documents ; habilitation par formation retirée (2026-11-25)
+- [x] Page Créneaux selon la maquette, statut actif et protection des créneaux utilisés (2026-11-25)

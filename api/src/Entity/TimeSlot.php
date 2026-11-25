@@ -34,6 +34,10 @@ class TimeSlot extends SoftDeletable
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
+    // An inactive slot stays on past classes but cannot be booked any more.
+    #[ORM\Column(options: ['default' => true]), Groups(['read', 'write'])]
+    public bool $active = true;
+
     public function __construct(
         #[ORM\Column(length: 50), Groups(['read', 'write']), Assert\NotBlank, Assert\Length(max: 50)] public string $label,
         #[ORM\Column(length: 5), Groups(['read', 'write']), Assert\Regex(self::HHMM, message: 'Format HH:MM.')] public string $startTime,

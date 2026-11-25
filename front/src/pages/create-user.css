@@ -82,3 +82,9 @@
 .uc-resend{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:16px}
 .uc-resend button{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #1557F5;border-radius:8px;background:#fff;color:#1557F5;font-weight:600;cursor:pointer}
 .uc-resend button svg{width:16px;height:16px}.uc-resend button:disabled{opacity:.5;cursor:not-allowed}
+.uc-org-options button i{width:10px;height:10px;border-radius:50%;background:var(--org);flex:none}.uc-org-options button svg{margin-left:auto}
+.uc-orgs [data-color=blue]{--org:#005dff;--org-bg:#e8f1ff;--org-text:#174ca6}
+.uc-orgs [data-color=purple]{--org:#8144cc;--org-bg:#f1e6fd;--org-text:#623397}
+.uc-orgs [data-color=gray]{--org:#58647a;--org-bg:#eef1f5;--org-text:#3d475a}
+.uc-orgs .uc-org-options button{justify-content:flex-start}
+.uc-orgs .uc-org-options button:is(:hover,[aria-pressed=true]),.uc-orgs .uc-org-tags button{background:var(--org-bg);color:var(--org-text);border-color:var(--org)}

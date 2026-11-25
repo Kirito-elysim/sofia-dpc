@@ -16,11 +16,13 @@ import MyClasses from './pages/MyClasses'
 import ChangePassword from './pages/ChangePassword'
 import Login from './pages/Login'
 import CreateUser, { EditUser } from './pages/CreateUser'
+import CreateTrainer, { EditTrainer } from './pages/TrainerForm'
 import VirtualClassConfigs from './pages/VirtualClassConfigs'
 import OrganizationWizard from './pages/OrganizationWizard'
 import OrganizationProfile from './pages/OrganizationProfile'
 import Organizations from './pages/Organizations'
-import { TimeSlots, Trainers, Trainings, Users, ZoomAccounts } from './pages/Settings'
+import TimeSlots from './pages/TimeSlots'
+import { Trainers, Trainings, Users, ZoomAccounts } from './pages/Settings'
 
 export default function App() {
   const me = useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/auth/me') })
@@ -59,6 +61,8 @@ export default function App() {
         {can('ORGANIZATIONS')&&<Route path="settings/organizations" element={<Organizations canWrite={can('EDIT_ORGANIZATIONS')} canCreate={global}/>}/>}
         {can('TRAININGS')&&<Route path="settings/trainings" element={<Trainings canWrite={can('EDIT_TRAININGS')}/>}/>}
         {can('TIME_SLOTS')&&<Route path="settings/time-slots" element={<TimeSlots canWrite={global}/>}/>}
+        {can('EDIT_TRAINERS')&&<Route path="settings/trainers/new" element={<CreateTrainer/>}/>}
+        {can('EDIT_TRAINERS')&&<Route path="settings/trainers/:id/edit" element={<EditTrainer/>}/>}
         {can('TRAINERS')&&<Route path="settings/trainers" element={<Trainers canWrite={can('EDIT_TRAINERS')}/>}/>}
         {global&&<>
           <Route path="audit" element={<Audit/>}/>

@@ -11,15 +11,22 @@ use Doctrine\ORM\EntityManagerInterface;
 /** @implements ProcessorInterface<SoftDeletable, void> */
 final class SoftDeleteProcessor implements ProcessorInterface
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em, private \App\Security\OrganizationScope $scope)
     {
     }
 
     /** @param SoftDeletable $data */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): void
     {
+        if ($data instanceof \App\Entity\Trainer) {
+            $this->scope->requireTrainer($data);
+        }
         $this->em->wrapInTransaction(static function (EntityManagerInterface $em) use ($data): void {
             $em->refresh($data, LockMode::PESSIMISTIC_WRITE);
+            if ($data instanceof \App\Entity\TimeSlot
+                && $em->getConnection()->fetchOne('SELECT 1 FROM class_slot WHERE time_slot_id = ? LIMIT 1', [$data->getId()])) {
+                throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Ce créneau est utilisé dans des classes : désactivez-le.');
+            }
             $data->markDeleted();
         });
     }

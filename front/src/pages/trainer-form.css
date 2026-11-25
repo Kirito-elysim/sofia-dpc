@@ -1,0 +1,24 @@
+.trainer-form nav{display:flex;align-items:center;gap:8px;font-size:14px;color:#0048ee}
+.trainer-form nav strong{color:#101d41}
+.tf-notice{padding:10px 14px;margin-bottom:12px!important;border-radius:8px;background:#e8f1ff;color:#174ca6}
+.trainer-form .uc-orgs legend{font-size:14px}
+.trainer-form .uc-input-icon select{padding-left:36px}
+.trainer-form .uc-input-icon svg{top:calc(50% + 2px)}
+.trainer-form textarea{display:block;box-sizing:border-box;width:100%;margin-top:5px;padding:8px 11px;border:1px solid #bdc9dc;border-radius:7px;font:400 14px/1.4 var(--font-sans);resize:vertical}
+.tf-formats{display:flex;flex-wrap:wrap;gap:8px 24px;margin:0;padding:0;border:0}
+.tf-formats legend{margin-bottom:8px;font-size:14px;font-weight:650}
+.uc-fields .tf-formats label{display:flex;align-items:center;gap:8px;font-weight:400}
+.tf-formats input,.tf-invite input{width:18px;height:18px;margin:0;accent-color:#1557F5}
+.tf-facts,.tf-documents,.tf-preview{margin:14px 0 0;padding:0;list-style:none;font-size:14px}
+.tf-facts{display:grid;gap:10px}.tf-facts li,.tf-preview li,.tf-documents li{display:flex;align-items:center;gap:12px}
+.tf-facts b{display:block}
+.trainer-form :is(.tf-facts,.tf-preview,.tf-documents) li>svg{flex:none;box-sizing:content-box;width:20px;height:20px;padding:7px;border-radius:50%;background:#e8f1ff;color:#1760dc}
+.tf-documents li{flex-wrap:wrap;padding-block:10px;border-bottom:1px solid #e6ecf5}.tf-documents li:last-child{border:0}
+.tf-documents li>div:first-of-type{flex:1;min-width:130px;overflow-wrap:anywhere}.tf-documents small{display:block;color:#46658f;font-size:12px}
+.tf-file-actions{display:flex;gap:6px}
+.tf-file-actions :is(label,button),.tf-access button{position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid #bdc9dc;border-radius:20px;background:#fff;color:#005dff;font-weight:600;cursor:pointer}
+.tf-file-actions svg{width:15px;height:15px}.tf-file-actions input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.tf-file-actions label:focus-within{outline:2px solid #005dff}
+.tf-access{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;font-size:14px}.tf-access p{width:100%}
+.tf-preview{border-radius:8px;background:#eef4ff;padding:4px 12px}.tf-preview li{padding-block:10px;border-bottom:1px solid #dbe6fa}.tf-preview li:last-child{border:0}
+.trainer-form .uc-footer{flex-wrap:wrap;align-items:center}.tf-invite{display:flex;align-items:center;gap:8px;margin-right:auto;font-size:14px}.tf-missing{font-size:13px;color:#46658f}

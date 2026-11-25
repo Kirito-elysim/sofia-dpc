@@ -134,14 +134,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->profilePhoto === null) {
             return;
         }
-        if (strlen($this->profilePhoto) <= 2796230 && preg_match('~^data:(image/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$~D', $this->profilePhoto, $parts)) {
-            $bytes = base64_decode($parts[2], true);
-            $info = $bytes !== false && strlen($bytes) <= 2 * 1024 * 1024 ? @getimagesizefromstring($bytes) : false;
-            if ($info && $info['mime'] === $parts[1]) {
-                return;
-            }
+        if (!\App\Validator\ProfilePhoto::isValid($this->profilePhoto)) {
+            $context->buildViolation(\App\Validator\ProfilePhoto::MESSAGE)->atPath('profilePhoto')->addViolation();
         }
-        $context->buildViolation('Choisissez une image JPG ou PNG de 2 Mo maximum.')->atPath('profilePhoto')->addViolation();
     }
 
     #[Assert\Callback]

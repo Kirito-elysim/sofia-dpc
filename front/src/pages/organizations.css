@@ -19,3 +19,5 @@
 .oa .directory-row-actions > .red{background:#ffe8e8;color:#d10b0b}
 
 .oa .directory-row-actions > button:nth-child(2){box-sizing:border-box;width:100%}
+
+.oa .oa-filters svg.picto.oa-icon{color:#46658f;mix-blend-mode:normal}.oa svg.picto.oa-icon{mix-blend-mode:normal}

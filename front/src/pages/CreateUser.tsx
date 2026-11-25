@@ -1,9 +1,10 @@
-import {useState,type FormEvent,type ReactNode} from 'react'
+import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {ArrowLeft,Check,ChevronDown,Pencil,Upload,X,Info,LockKeyhole,Mail,Save,ShieldCheck,UserRound,UserRoundPlus} from 'lucide-react'
+import {ArrowLeft,Check,Info,LockKeyhole,Mail,Save,ShieldCheck,UserRound,UserRoundPlus} from 'lucide-react'
 import {Link,Navigate,useNavigate,useParams} from 'react-router-dom'
 import {api,type Me} from '../api'
 import {rolePayload,useCustomRoles,staffRoles} from './userRoles'
+import {Card,OrganizationPicker,PhotoPicker,useOrganizations} from './FormParts'
 import './create-user.css'
 
 const listPath='/settings/users'
@@ -15,10 +16,6 @@ const permissionsByRole: Record<string,string[]> = {
   ROLE_ADMIN:adminPermissions,
   ROLE_SUIVI:followUpPermissions,
   ROLE_LECTURE:staffPermissions,
-}
-
-function Card({title,icon,children}:{title:string;icon:ReactNode;children:ReactNode}) {
-  return <section className="uc-card"><h2><i>{icon}</i>{title}</h2>{children}</section>
 }
 
 type Account={id:number;name:string;email:string;phone?:string|null;jobTitle?:string|null;active:boolean;role:string;assignedRole?:string;profilePhoto?:string|null;organizations?:{id:number}[];organization?:{id:number}|null}
@@ -49,9 +46,7 @@ function UserForm({user}:{user?:Account}) {
   const options=[...staffRoles,...(customRoles.data?.roles.map(item=>({value:'custom:'+item.id,label:item.name}))??[])]
   const [role,setRole]=useState(user?.assignedRole??user?.role??'')
   const [organizations,setOrganizations]=useState<string[]>(()=>(user?.organizations?.length?user.organizations:user?.organization?[user.organization]:[]).map(org=>String(org.id)))
-  const [orgSearch,setOrgSearch]=useState('')
   const [photo,setPhoto]=useState<string|null>(user?.profilePhoto??null)
-  const [photoError,setPhotoError]=useState('')
   const [photoLoading,setPhotoLoading]=useState(false)
   const [sendAccess,setSendAccess]=useState(true)
   const customRole=customRoles.data?.roles.find(item=>'custom:'+item.id===role)
@@ -59,7 +54,7 @@ function UserForm({user}:{user?:Account}) {
     ? [...new Set(customRole.permissions.flatMap(key=>[key,...(customRoles.data?.dependencies[key]??[])]))].map(key=>customRoles.data?.permissions[key])
     : permissionsByRole[role]??[]
   const isGlobal=role==='ROLE_SUPER_ADMIN'
-  const orgs=useQuery({queryKey:['organizations'],queryFn:()=>api<{id:number;name:string}[]>('/organizations')})
+  const orgs=useOrganizations()
   const create=useMutation({
     mutationFn:(body:object)=>user
       ?api('/users/'+user.id,{method:'PATCH',headers:{'Content-Type':'application/merge-patch+json'},body:JSON.stringify(body)})
@@ -98,31 +93,8 @@ function UserForm({user}:{user?:Account}) {
               <label>Nom {!user&&<em>*</em>}<input autoComplete="section-newuser family-name" required={!user} maxLength={149} placeholder="Ex. Mouna" value={lastName} onChange={e=>setLastName(e.target.value)}/><small>Nom de famille affiché dans les listes.</small></label>
               <label>E-mail <em>*</em><span className="uc-input-icon"><Mail aria-hidden="true"/><input name="email" type="email" defaultValue={user?.email} required maxLength={180} placeholder="Ex. charles@exemple.fr" autoComplete="section-newuser email"/></span><small>Adresse utilisée pour se connecter et recevoir les accès.</small></label>
               <label>Téléphone<input name="phone" defaultValue={user?.phone??''} type="tel" maxLength={40} placeholder="Ex. 06 12 34 56 78"/><small>Numéro de contact professionnel, facultatif.</small></label>
-              <fieldset className="uc-orgs"><legend>Organismes {isGlobal?'':'*'}</legend>
-                {isGlobal?'Tous les organismes':<>
-                  <details className="uc-org-select" onKeyDown={event=>{
-                    if(event.key==='Escape'){
-                      event.currentTarget.open=false
-                      event.currentTarget.querySelector('summary')?.focus()
-                    }
-                  }}>
-                    <summary>{organizations.length ? `${organizations.length} sélectionné(s)` : 'Sélectionner des organismes'}<ChevronDown aria-hidden="true"/></summary>
-                    <div className="uc-org-options">
-                      <input aria-label="Rechercher un organisme" placeholder="Rechercher…" value={orgSearch} onChange={event=>setOrgSearch(event.target.value)}/>
-                      {orgs.data?.filter(org=>org.name.toLocaleLowerCase().includes(orgSearch.trim().toLocaleLowerCase())).map(org=>{
-                        const id=String(org.id)
-                        const selected=organizations.includes(id)
-                        return <button key={id} type="button" aria-pressed={selected} onClick={()=>{
-                          setOrganizations(ids=>selected?ids.filter(value=>value!==id):[...ids,id])
-                        }}>{org.name}{selected&&<Check aria-hidden="true"/>}</button>
-                      })}
-                      {!orgs.data?.some(org=>org.name.toLocaleLowerCase().includes(orgSearch.trim().toLocaleLowerCase()))&&<small>{orgs.isLoading?'Chargement…':'Aucun organisme trouvé.'}</small>}
-                    </div>
-                  </details>
-                  <div className="uc-org-tags">{orgs.data?.filter(org=>organizations.includes(String(org.id))).map(org=><button key={org.id} type="button" aria-label={`Retirer ${org.name}`} onClick={()=>{setOrganizations(ids=>ids.filter(id=>id!==String(org.id)))}}>{org.name}<X aria-hidden="true"/></button>)}</div>
-                </>}
-                <small>{orgs.isError?'Chargement impossible.':isGlobal?'Le super administrateur dispose d’un accès global.':'Recherchez et sélectionnez un ou plusieurs organismes.'}</small>
-              </fieldset>
+              {isGlobal?<fieldset className="uc-orgs"><legend>Organismes</legend>Tous les organismes<small>Le super administrateur dispose d’un accès global.</small></fieldset>
+                :<OrganizationPicker legend="Organismes *" hint="Recherchez et sélectionnez un ou plusieurs organismes." value={organizations} onChange={setOrganizations}/>}
               <label>Fonction<input name="jobTitle" defaultValue={user?.jobTitle??''} maxLength={150} placeholder="Ex. Responsable DPC"/><small>Intitulé du poste, indépendant des permissions.</small></label>
             </div>
           </Card>
@@ -151,35 +123,7 @@ function UserForm({user}:{user?:Account}) {
         </div>
         <aside className="uc-stack">
           <Card title="Profil utilisateur" icon={<UserRound aria-hidden="true"/>}>
-            <div className="uc-profile-picker">
-              <label className="uc-avatar" htmlFor="user-photo" aria-label="Choisir une photo de profil">
-                {photo?<img src={photo} alt="Aperçu de la photo de profil"/>:<UserRound aria-hidden="true"/>}
-                <i><Pencil aria-hidden="true"/></i>
-              </label>
-              <div><strong>Photo de profil</strong><p>JPG ou PNG (max. 2 Mo)</p>
-              <div className="uc-photo">
-              <label><Upload aria-hidden="true"/> {photo?'Remplacer le fichier':'Choisir un fichier'}
-                <input id="user-photo" type="file" accept="image/jpeg,image/png" disabled={photoLoading} onChange={event=>{
-                  const file=event.target.files?.[0]
-                  event.target.value=''
-                  if(!file)return
-                  setPhotoError('')
-                  if(!['image/jpeg','image/png'].includes(file.type)||file.size>2*1024*1024){
-                    setPhotoError('Choisissez une image JPG ou PNG de 2 Mo maximum.')
-                    return
-                  }
-                  const reader=new FileReader()
-                  setPhotoLoading(true)
-                  reader.onload=()=>{setPhoto(String(reader.result));setPhotoLoading(false)}
-                  reader.onerror=()=>{setPhotoError('Impossible de lire la photo.');setPhotoLoading(false)}
-                  reader.readAsDataURL(file)
-                }}/>
-              </label>
-              {photo&&<button type="button" onClick={()=>{setPhoto(null);setPhotoError('')}} disabled={photoLoading}>Retirer</button>}
-            </div>
-            </div></div>
-            {photoError&&<p className="uc-error" role="alert">{photoError}</p>}
-
+            <PhotoPicker photo={photo} onChange={setPhoto} onLoading={setPhotoLoading}/>
           </Card>
           <Card title="Permissions selon le rôle" icon={<ShieldCheck aria-hidden="true"/>}>
             {role?<ul className="uc-rights">{permissions.map(permission=><li key={permission}><Check aria-hidden="true"/>{permission}</li>)}</ul>:<p className="uc-permissions-empty">Sélectionnez un rôle pour afficher ses permissions.</p>}

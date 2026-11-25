@@ -79,10 +79,10 @@ class TrainerAccessController extends AbstractController
 
         $user = new User($trainer->email, mb_substr($trainer->firstName.' '.$trainer->lastName, 0, 150), '', ['ROLE_FORMATEUR']);
         $user->trainer = $trainer;
-        if ($trainer->organization) {
-            $user->organization = $trainer->organization;
-            $user->addOrganization($trainer->organization);
+        foreach ($trainer->getOrganizations() as $organization) {
+            $user->addOrganization($organization);
         }
+        $user->organization = $user->organizations->first() ?: null;
 
         return $this->invite($user, 'created');
     }
@@ -107,7 +107,7 @@ class TrainerAccessController extends AbstractController
         if (!$trainer || $trainer->getDeletedAt()) {
             throw $this->createNotFoundException('Formateur introuvable.');
         }
-        $this->scope->require($trainer->organization?->getId());
+        $this->scope->requireTrainer($trainer);
 
         return $trainer;
     }

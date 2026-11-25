@@ -72,8 +72,8 @@ final class ClassSchedulingController extends AbstractController
                 $slotId = $this->positiveId($row['timeSlotId'] ?? null);
                 $time = $em->find(TimeSlot::class, $slotId);
                 $trainer = $em->find(Trainer::class, $this->positiveId($row['trainerId'] ?? null));
-                if (isset($seen[$slotId]) || !$time || !$time->getDurationMin() || $time->getDeletedAt() || !$trainer?->active || $trainer->getDeletedAt() || !$trainer->getTrainings()->contains($training)) {
-                    throw new UnprocessableEntityHttpException('Créneau répété, horaire invalide ou formateur non habilité.');
+                if (isset($seen[$slotId]) || !$time?->active || !$time->getDurationMin() || $time->getDeletedAt() || !$trainer?->active || $trainer->getDeletedAt() || !$trainer->getOrganizations()->contains($training->organization)) {
+                    throw new UnprocessableEntityHttpException('Créneau répété, horaire invalide ou formateur hors de l’organisme.');
                 }
                 $seen[$slotId] = true;
                 $slot = new ClassSlot($class, $time, $trainer);

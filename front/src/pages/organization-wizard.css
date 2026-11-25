@@ -86,3 +86,4 @@
 .ow .ed-actions button.ed-remove{border-color:#f1b4bd;color:#c72539}
 .oe .ow-fields input,.oe .ow-fields select{font:inherit;font-weight:400}
 .oe .ow-fields :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.ow .ow-guide>svg.picto-heading{width:84px;height:84px;padding:20px;align-self:center}

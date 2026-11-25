@@ -519,3 +519,67 @@ Restes ouverts : en production l’envoi est refusé tant que `MAILER_DSN` n’e
 - À la demande de l’utilisateur, tout le travail en attente (reprise de Codex et sessions du 25 novembre) est commité en un seul commit sur la branche `feat/comptes-roles-acces-formateur`. Ni poussé, ni fusionné dans `main`, ni déployé. Les mentions « non commité » plus haut sont closes par ce commit.
 - Fusionné ensuite dans `main` (avance rapide) à la demande de l’utilisateur. Non poussé et non déployé.
 - Dépôt distant : `https://github.com/Kirito-elysim/sofia-dpc` (remote `origin`). L’utilisateur a demandé le 25 novembre 2026 de pousser `main`, après avoir été averti que le dépôt est public. Reste conseillé : le passer en privé et contrôler les valeurs des fichiers `api/.env*` suivis.
+
+### Page Formateurs — état vide et notes de maquette (25 novembre 2026)
+
+- Demandes de l’utilisateur : « Aucun résultat pour ce filtre » doit être dans le tableau ; retirer les blocs « 3 points d’ergonomie » et « Questions ouvertes » des formateurs.
+- L’état vide est une ligne du tableau, affichée seulement sans résultat (même composant sur Formations, qui l’affichait en permanence sous le tableau). Les notes sont retirées de Formateurs ; Formations garde les siennes.
+- Les questions ouvertes retirées de l’écran restent à trancher si besoin : fiche formateur détaillée, disponibilités, limitation par organisme, liste des spécialités.
+- Vérifications : lint, 2 tests, build ; recette navigateur de Formateurs (liste vide) et Formations. Non commité.
+
+### Tableau Formateurs aligné sur Organismes — 25 novembre 2026
+
+- Demande de l’utilisateur : un tableau similaire aux autres, comme Organismes.
+- Formateurs et Formations (composant commun) utilisent le style `od-table`, les actions libellées Modifier, Activer ou Désactiver et Supprimer avec la grille partagée, et le panneau vide d’Organismes, placé dans le tableau. Formateurs garde l’icône « Se connecter en tant que ». Le parcours Organismes n’est pas modifié.
+- Vérifications : lint, 2 tests, build ; recette navigateur de Formateurs en 1440 × 900, vide et avec une fiche fictive (retirée ensuite). Non vu à l’écran : Formations après ce changement et la fiche latérale ouverte. Non commité.
+
+### Page formateur d’après la maquette — 25 novembre 2026
+
+Choix de l’utilisateur :
+- Intégrer la maquette « Créer un formateur » sans toucher à la barre de navigation ; pas de « Formations assurées » ni de « Créneaux d’intervention habituels ».
+- **Habilitation par formation supprimée** : un formateur peut animer toutes les formations de ses organismes. La planification contrôle l’organisme (remplace la règle « formateur habilité »).
+
+Livré :
+- `/settings/trainers/new` et `/settings/trainers/:id/edit` (la fiche latérale des formateurs est retirée ; la gestion de l’accès est sur la page de modification).
+- Formateur rattaché à plusieurs organismes ; profession, RPPS/ADELI, formats, biographie, notes internes, photo, date de mise à jour ; documents CV, convention et signature (PDF, JPG, PNG, 5 Mo).
+- Un compte restreint voit un formateur partagé, mais ne peut le modifier, le supprimer, gérer son accès ou lire ses documents que si tous ses organismes sont dans son périmètre.
+- Migration `Version20261125060000`, appliquée en local. Elle reprend l’ancien organisme et ceux des anciennes formations habilitées. `trainer.organization_id` et `trainer_training` restent en base, inutilisés.
+
+Écarts avec la maquette : « Type d’intervention » non affiché (aucune donnée) ; civilité conservée en base mais absente de la page. Organisme et format sont exigés par l’écran, pas par l’API.
+
+Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 tests, build ; recette navigateur en 1672 × 941 : création d’un formateur fictif avec CV et invitation, réouverture et téléchargement. Données de recette retirées. Un formateur sans organisme ne peut plus être planifié : en attribuer un. Rien n’est commité.
+- Écart au cahier des charges (Formateurs : « formations assurées »), à la demande de l’utilisateur. La page de création d’utilisateur, dont les sélecteurs d’organisme et de photo sont désormais partagés, n’a pas été revue au navigateur.
+
+### Retours sur la page formateur — 25 novembre 2026
+
+- Demandes de l’utilisateur : retirer la signature, fermer la liste des organismes au clic ailleurs, disposer aussi de la modification.
+- Documents limités au CV et à la convention (écran et API). La liste des organismes se ferme au clic ou au focus hors du champ (formateurs et utilisateurs).
+- La modification existait déjà sur la même page (`/settings/trainers/:id/edit`, bouton Modifier) ; enregistrement revérifié au navigateur (spécialité et second organisme).
+- Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 tests, build ; recette navigateur. Données de recette retirées. Rien n’est commité.
+
+### Page Créneaux d’après la maquette — 25 novembre 2026
+
+- Demande de l’utilisateur : intégrer la maquette des créneaux (barre de navigation non modifiée).
+- Recherche, filtre de statut, vues Liste et Calendaire (frise sur une journée), tri, sélection, pagination, panneau latéral d’ajout et de modification avec durée calculée.
+- Statut actif ajouté (`Version20261125070000`, appliquée en local). Un créneau inactif n’est plus proposé ni accepté à la planification. Un créneau utilisé par une classe ne peut pas être supprimé (API 409) : la fenêtre propose de le désactiver. `GET /api/time-slot-usage`.
+- Écriture réservée au super admin, comme avant. Fenêtre de confirmation centrée (la maquette la place en bas).
+- À surveiller : modifier les horaires d’un créneau déjà utilisé change l’affichage des classes existantes, leurs réservations Zoom gardant les anciennes heures. Comportement antérieur, non traité.
+- Vérifications : PHPUnit 24 tests, 272 assertions ; lint (un avertissement), 2 tests, build ; recette navigateur en 1586 × 992. Créneau fictif supprimé. Rien n’est commité.
+
+### Couleurs d’organisme, créneaux et pictogrammes — 25 novembre 2026
+
+- Demandes de l’utilisateur : couleur paramétrée de l’organisme dans la sélection multiple ; retirer le fil d’Ariane des créneaux ; pictogrammes nets et d’un même thème partout.
+- Sélection multiple (formateurs et utilisateurs) : pastille et puce à la couleur de l’organisme ; sans couleur choisie, violet pour Phocea et bleu sinon.
+- Pictogrammes : les PNG sont remplacés par des icônes vectorielles Lucide, via `components/Picto.tsx` (titres, indicateurs, filtres) et directement dans la barre latérale. Concerne Formations, Formateurs, Utilisateurs, Planning, Tableau de bord, création d’organisme et navigation. Logos, photos, vagues décoratives et page de connexion (rendu validé) conservés. Les anciens PNG restent dans `front/public`, inutilisés.
+- Non traité : les badges d’organisme des tableaux et du planning gardent une couleur déduite du code ; le fil d’Ariane des pages formateur est conservé (maquette).
+- Vérifications : lint (un avertissement), 2 tests, build ; recette navigateur en 1440 × 900 (formateurs, formations, utilisateurs, planning, tableau de bord, créneaux, sélection multiple). Création d’organisme non revue à l’écran. Rien n’est commité.
+
+### Actions des créneaux — 25 novembre 2026
+
+- Demande de l’utilisateur : mêmes actions que les autres tableaux. Les icônes seules de la maquette sont remplacées par Modifier, Activer ou Désactiver et Supprimer, avec le style partagé.
+- Vérifications : lint (un avertissement), 2 tests, build ; comparaison au navigateur avec Formations en 1440 × 900. Rien n’est commité.
+
+### Commit — 25 novembre 2026 (formateurs, créneaux, pictogrammes)
+
+- À la demande de l’utilisateur, le travail en attente est commité sur la branche `feat/formateurs-creneaux-pictos`. Ni fusionné dans `main`, ni poussé, ni déployé. Les mentions « non commité » des sections précédentes sont closes par ce commit.
+- Au déploiement : appliquer `Version20261125060000` et `Version20261125070000`.

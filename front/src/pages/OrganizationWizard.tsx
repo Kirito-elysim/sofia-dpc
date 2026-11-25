@@ -1,3 +1,4 @@
+import {Picto} from '../components/Picto'
 import {useEffect,useState} from 'react'
 import {Link,useNavigate,useSearchParams} from 'react-router-dom'
 import {useQueryClient} from '@tanstack/react-query'
@@ -131,5 +132,5 @@ export default function OrganizationWizard({user}:{user:string}){
       </section>
     </>}
     {message&&<p role="status">{message}</p>}<footer>{step?<button type="button" onClick={()=>move(step-1)}><ArrowLeft/>Retour</button>:<Link to={path}>Annuler</Link>}<button type="button" onClick={draft}><Save/>Enregistrer en brouillon</button><button type="submit">{step===4?'Créer l’organisme':'Continuer'}{step===4?<Check/>:<ArrowRight/>}</button></footer></fieldset></form></div>
-    <aside className="ow-guide"><img src="/organizations/creation-building.png" alt=""/><h2>Création d’un organisme</h2><p>Complétez les 5 étapes pour ajouter un nouvel organisme.</p><ol>{steps.map((s,i)=><li key={s} aria-current={i===step?'step':undefined}><b>{i+1}</b><div><strong>{s}</strong><small>{descriptions[i]}</small></div></li>)}</ol></aside></div></section>
+    <aside className="ow-guide"><Picto name="building" className="picto-heading"/><h2>Création d’un organisme</h2><p>Complétez les 5 étapes pour ajouter un nouvel organisme.</p><ol>{steps.map((s,i)=><li key={s} aria-current={i===step?'step':undefined}><b>{i+1}</b><div><strong>{s}</strong><small>{descriptions[i]}</small></div></li>)}</ol></aside></div></section>
 }

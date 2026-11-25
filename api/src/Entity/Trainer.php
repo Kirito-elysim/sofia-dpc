@@ -11,17 +11,20 @@ use ApiPlatform\Metadata\Post;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\State\SoftDeleteProcessor;
+use App\Validator\ProfilePhoto;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /** "Formateur". No Zoom account of their own. */
 #[ORM\Entity]
 #[UniqueEntity('email')]
 #[ApiResource(
     operations: [
-        new GetCollection(), new Get(),
+        new GetCollection(),
+        new Get(normalizationContext: ['groups' => ['read', 'trainer:item']]),
         new Post(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAINERS')"),
         new Patch(processor: \App\State\ScopedCatalogProcessor::class, security: "is_granted('SOFIA_EDIT_TRAINERS')"),
         new Delete(security: "is_granted('SOFIA_EDIT_TRAINERS')", processor: SoftDeleteProcessor::class),
@@ -35,11 +38,32 @@ class Trainer extends SoftDeletable
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
-    /** @var Collection<int, Training> */
-    #[ORM\ManyToMany(targetEntity: Training::class)]
-    #[ORM\InverseJoinColumn(onDelete: 'CASCADE')]
+    /** @var Collection<int, Organization> */
+    #[ORM\ManyToMany(targetEntity: Organization::class)]
+    #[ORM\JoinTable(name: 'trainer_organization')]
     #[Groups(['read', 'write'])]
-    private Collection $trainings;
+    private Collection $organizations;
+
+    #[ORM\Column(length: 80, nullable: true), Groups(['read', 'write']), Assert\Length(max: 80)]
+    public ?string $profession = null;
+
+    #[ORM\Column(length: 20, nullable: true), Groups(['read', 'write']), Assert\Regex('/\A[0-9 ]{9,20}\z/', message: 'Le numéro RPPS ou ADELI comporte au moins 9 chiffres.')]
+    public ?string $rppsNumber = null;
+
+    /** @var list<string> */
+    #[ORM\Column(type: 'json', options: ['default' => '[]']), Groups(['read', 'write'])]
+    #[Assert\All([new Assert\Choice(choices: ['VIRTUAL_CLASS', 'ELEARNING', 'INTEGRATED'])])]
+    public array $formats = [];
+
+    #[ORM\Column(type: 'text', nullable: true), Groups(['read', 'write']), Assert\Length(max: 2000)]
+    public ?string $biography = null;
+
+    // Read on a single sheet only: the list would carry every picture.
+    #[ORM\Column(type: 'text', nullable: true), Groups(['write', 'trainer:item'])]
+    public ?string $photo = null;
+
+    #[ORM\Column(nullable: true), Groups('read')]
+    public ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct(
         #[ORM\Column(length: 100), Groups(['read', 'write', 'user:read']), Assert\NotBlank] public string $firstName,
@@ -50,9 +74,8 @@ class Trainer extends SoftDeletable
         #[ORM\Column(length: 12, nullable: true), Groups(['read', 'write']), Assert\Length(max: 12)] public ?string $civility = null,
         #[ORM\Column(length: 100, nullable: true), Groups(['read', 'write']), Assert\Length(max: 100)] public ?string $specialty = null,
         #[ORM\Column(length: 500, nullable: true), Groups(['read', 'write']), Assert\Length(max: 500)] public ?string $comments = null,
-        #[ORM\ManyToOne, Groups(['read', 'write'])] public ?Organization $organization = null,
     ) {
-        $this->trainings = new ArrayCollection();
+        $this->organizations = new ArrayCollection();
     }
 
     #[Groups(['read', 'user:read'])]
@@ -61,21 +84,29 @@ class Trainer extends SoftDeletable
         return $this->id;
     }
 
-    /** @return Collection<int, Training> */
-    public function getTrainings(): Collection
+    /** @return Collection<int, Organization> */
+    public function getOrganizations(): Collection
     {
-        return $this->trainings;
+        return $this->organizations;
     }
 
-    public function addTraining(Training $t): void
+    public function addOrganization(Organization $organization): void
     {
-        if (!$this->trainings->contains($t)) {
-            $this->trainings->add($t);
+        if (!$this->organizations->contains($organization)) {
+            $this->organizations->add($organization);
         }
     }
 
-    public function removeTraining(Training $t): void
+    public function removeOrganization(Organization $organization): void
     {
-        $this->trainings->removeElement($t);
+        $this->organizations->removeElement($organization);
+    }
+
+    #[Assert\Callback]
+    public function validatePhoto(ExecutionContextInterface $context): void
+    {
+        if (null !== $this->photo && !ProfilePhoto::isValid($this->photo)) {
+            $context->buildViolation(ProfilePhoto::MESSAGE)->atPath('photo')->addViolation();
+        }
     }
 }

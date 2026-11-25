@@ -37,6 +37,19 @@ final class OrganizationScope
         }
     }
 
+    /** Changing a trainer shared between organizations requires all of them. */
+    public function requireTrainer(\App\Entity\Trainer $trainer): void
+    {
+        if (null === $this->ids()) {
+            return;
+        }
+        // Raw SQL: the Doctrine filter would hide the very organizations to refuse.
+        $organizations = $this->em->getConnection()->fetchFirstColumn('SELECT organization_id FROM trainer_organization WHERE trainer_id = ?', [$trainer->getId()]);
+        foreach ($organizations ?: [null] as $id) {
+            $this->require($id);
+        }
+    }
+
     #[AsEventListener(event: 'kernel.request', priority: 6)]
     public function apply(RequestEvent $event): void
     {

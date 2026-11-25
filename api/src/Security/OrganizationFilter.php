@@ -15,7 +15,8 @@ final class OrganizationFilter extends SQLFilter
 
         return match ($metadata->getName()) {
             Organization::class => "$alias.id IN ($ids)",
-            Training::class, Trainer::class => "$alias.organization_id IN ($ids)",
+            Training::class => "$alias.organization_id IN ($ids)",
+            Trainer::class => "EXISTS (SELECT 1 FROM trainer_organization scoped_trainer WHERE scoped_trainer.trainer_id = $alias.id AND scoped_trainer.organization_id IN ($ids))",
             VirtualClass::class => "$alias.training_id IN (SELECT id FROM training WHERE organization_id IN ($ids))",
             Enrollment::class, ClassSlot::class => "$alias.virtual_class_id IN ($classes)",
             Participant::class => "$alias.id IN (SELECT participant_id FROM enrollment WHERE virtual_class_id IN ($classes))",
