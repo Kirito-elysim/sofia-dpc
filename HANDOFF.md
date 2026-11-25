@@ -583,3 +583,4 @@ Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 t
 
 - À la demande de l’utilisateur, le travail en attente est commité sur la branche `feat/formateurs-creneaux-pictos`. Ni fusionné dans `main`, ni poussé, ni déployé. Les mentions « non commité » des sections précédentes sont closes par ce commit.
 - Au déploiement : appliquer `Version20261125060000` et `Version20261125070000`.
+- Fusionné dans `main` et poussé sur `origin` à la demande de l’utilisateur. Déploiement non vérifié.
