@@ -29,7 +29,7 @@ export function Users() {
   const customRoles=useCustomRoles()
   const list=useQuery({queryKey:['users'],queryFn:()=>api<Parameters<typeof UserDirectory>[0]['rows']>('/users')})
   const roles=[...ROLES,...(customRoles.data?.roles.map(role=>({value:'custom:'+role.id,label:role.name}))??[])]
-  return <>{list.error&&<p role="alert">{list.error.message}</p>}<UserDirectory rows={list.data??[]} roles={roles}/></>
+  return <>{list.error&&<p role="alert">{list.error.message}</p>}<UserDirectory rows={list.data??[]} roles={roles} loading={list.isLoading}/></>
 }
 
 const zoomFields: Field[] = [

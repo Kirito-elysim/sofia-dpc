@@ -1,9 +1,9 @@
-.org-directory{--accent:#005aff;color:#0d1937;padding:0;background:linear-gradient(120deg,#fff,#f4f6fc);min-height:100%;font-family:inherit;container-type:inline-size}
+.org-directory{--accent:#005aff;container-type:inline-size}
 .org-directory *{box-sizing:border-box}
 .org-directory .od-body h2{margin:0}
-.org-directory :not(.oa-title) > svg{width:1.35em;height:1.35em;flex:none}
+.org-directory :is(.od-stats,.od-cards,.od-drafts) svg{width:1.35em;height:1.35em;flex:none}
 .org-directory :is(.od-filters,.od-cards,.od-pages) :is(button,a,select,input){font:inherit}
-.org-directory button,.org-directory a{cursor:pointer;text-decoration:none;color:inherit}
+.org-directory :is(.od-cards,.od-drafts) :is(button,a){cursor:pointer;text-decoration:none;color:inherit}
 .od-stats>div,.od-filters,.od-filters label,.od-main,.od-body h2,.od-fields,.od-fields>div,.od-fields aside span,.od-cards footer,.od-cards footer>span,.od-actions,.od-actions :is(a,button),.od-pages,.od-pages>div{display:flex;align-items:center}
 .od-stats i,.od-logo{display:grid;place-items:center}
 .od-pages b{background:var(--accent);color:white;border-radius:10px}

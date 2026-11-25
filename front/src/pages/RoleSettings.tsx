@@ -1,8 +1,9 @@
 import {useRef,useState} from 'react'
 import {useMutation,useQueryClient} from '@tanstack/react-query'
-import {Activity,Building2,CalendarDays,Check,ChevronLeft,ChevronRight,Clock,GraduationCap,House,Layers,List,LockKeyhole,Pencil,Plus,Save,Search,SearchX,Settings,ShieldCheck,UserRound,Users,Video} from 'lucide-react'
+import {Activity,Building2,CalendarDays,Check,Clock,GraduationCap,House,Layers,Save,Settings,ShieldCheck,UserRound,Users,Video} from 'lucide-react'
 import {api} from '../api'
 import {userRoles,useCustomRoles,type CustomRole} from './userRoles'
+import {Badge,DataTable,EditAction,EmptyState,Filters,ListPage,LockedAction,PageHeader,RowActions,SearchField,SelectField} from '../components/list/List'
 import './roles.css'
 
 const sections=[
@@ -23,7 +24,6 @@ export default function RoleSettings(){
   const [search,setSearch]=useState(''),[type,setType]=useState('')
   const [id,setId]=useState<number>(),[name,setName]=useState(''),[keys,setKeys]=useState<string[]>([]),[changed,setChanged]=useState(false)
   const [notice,setNotice]=useState('')
-  const [page,setPage]=useState(1),[size,setSize]=useState(10)
   const input=useRef<HTMLInputElement>(null)
   const custom=directory.data?.roles??[]
   const labels=directory.data?.permissions??{}
@@ -40,26 +40,26 @@ export default function RoleSettings(){
   })
   const rows=[...userRoles.map(role=>({name:role.label,role:undefined as CustomRole|undefined})),...custom.map(role=>({name:role.name,role}))]
   const visible=rows.filter(row=>row.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())&&(!type||type===(row.role?'custom':'system')))
-  const last=Math.max(1,Math.ceil(visible.length/size)),current=Math.min(page,last),shown=visible.slice((current-1)*size,current*size)
-  return <section className="roles-work">
-    <div className="roles-left"><header className="roles-title"><ShieldCheck/><div><h1>Rôles et permissions</h1><p>Gérez les accès aux rubriques de Sofia.</p></div></header>
+  const reset=()=>{setSearch('');setType('')}
+  return <ListPage>
+    <PageHeader icon="shield" title="Rôles et permissions" subtitle="Gérez les accès aux rubriques de Sofia." add={{label:'Créer un rôle',onClick:()=>edit()}}/>
+    <div className="roles-work"><div className="roles-left">
       <div className="roles-stats">{[[Users,'Rôles',rows.length],[ShieldCheck,'Rôles système',userRoles.length],[Layers,'Personnalisés',custom.length]].map(([IconValue,label,count])=>{
         const Icon=IconValue as typeof Users
         return <div key={String(label)}><Icon/><span><strong>{directory.data?String(count):'—'}</strong>{String(label)}</span></div>
       })}</div>
-      <section className="roles-card"><header><List/><h2>Rôles existants</h2><button type="button" className="roles-primary" onClick={()=>edit()}><Plus/>Créer un rôle</button></header>
-        <div className="roles-filters"><label><Search/><input aria-label="Rechercher un rôle" placeholder="Rechercher un rôle…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}/></label>
-          <select aria-label="Type de rôle" value={type} onChange={e=>{setType(e.target.value);setPage(1)}}><option value="">Tous les types</option><option value="system">Système</option><option value="custom">Personnalisé</option></select></div>
-        {directory.error&&<p role="alert">{directory.error.message}</p>}
-        {visible.length>0&&<table><thead><tr><th>Nom du rôle</th><th>Type</th><th>Action</th></tr></thead><tbody>{shown.map(({name,role})=><tr key={role?.id??name}><td>{name}</td><td><span className="roles-badge">{role?'Personnalisé':'Système'}</span></td><td>{role?<button type="button" aria-label={'Modifier '+name} onClick={()=>edit(role)}><Pencil/></button>:<LockKeyhole aria-label="Rôle protégé"/>}</td></tr>)}</tbody></table>}
-        {visible.length>0&&<footer className="roles-pages"><span>{visible.length} résultats sur {rows.length}</span><select aria-label="Résultats par page" value={size} onChange={e=>{setSize(Number(e.target.value));setPage(1)}}>{[10,25,50].map(n=><option value={n} key={n}>{n} par page</option>)}</select><button type="button" disabled={current===1} onClick={()=>setPage(current-1)} aria-label="Précédent"><ChevronLeft/></button><b aria-current="page">{current} / {last}</b><button type="button" disabled={current===last} onClick={()=>setPage(current+1)} aria-label="Suivant"><ChevronRight/></button></footer>}
-        {!visible.length&&directory.isLoading&&<p role="status">Chargement des rôles…</p>}
-        {!visible.length&&directory.data&&!directory.error&&<div className="od-empty" role="status">
-          <i><SearchX aria-hidden="true"/></i><h2>Aucun résultat</h2>
-          <p>Modifiez votre recherche ou le type de rôle sélectionné.</p>
-          <button type="button" onClick={()=>{setSearch('');setType('');setPage(1)}}>Réinitialiser les filtres</button>
-        </div>}
-      </section>
+      <Filters onReset={reset}>
+        <SearchField label="Rechercher un rôle" value={search} onChange={setSearch}/>
+        <SelectField label="Type de rôle" icon="tag" all="Tous les types" value={type} onChange={setType} options={[{value:'system',label:'Système'},{value:'custom',label:'Personnalisé'}]}/>
+      </Filters>
+      {directory.error&&<p role="alert">{directory.error.message}</p>}
+      <DataTable title="Liste des rôles" rows={visible} total={rows.length} loading={directory.isLoading} filterKey={search+'|'+type} rowKey={r=>r.role?.id??r.name} rowName={r=>r.name}
+        columns={[
+          {key:'name',label:'Nom du rôle',sort:r=>r.name,render:r=><strong>{r.name}</strong>},
+          {key:'type',label:'Type',sort:r=>r.role?'Personnalisé':'Système',render:r=><Badge tone={r.role?'purple':'blue'}>{r.role?'Personnalisé':'Système'}</Badge>},
+        ]}
+        actions={r=><RowActions>{r.role?<EditAction aria-label={'Modifier '+r.name} onClick={()=>edit(r.role)}/>:<LockedAction/>}</RowActions>}
+        empty={<EmptyState title="Aucun résultat pour ce filtre" text="Modifiez votre recherche ou le type de rôle sélectionné." action={{label:'Réinitialiser les filtres',onClick:reset}}/>}/>
     </div>
     <form className="roles-card roles-editor" onSubmit={e=>{e.preventDefault();save.mutate()}}>
       <header><ShieldCheck/><h2>{id?'Modifier le rôle':'Créer un rôle personnalisé'}</h2></header>
@@ -68,6 +68,6 @@ export default function RoleSettings(){
       {sections.map(group=><fieldset key={group.title}><legend>{group.title}</legend>{group.items.map(([key,Icon])=><label key={key}><Icon/>{labels[key]??'…'}<input type="checkbox" role="switch" checked={keys.includes(key)} onChange={e=>{setChanged(true);setKeys(e.target.checked?[...keys,key]:keys.filter(item=>item!==key))}}/></label>)}</fieldset>)}
       {save.error&&<p role="alert">{save.error.message}</p>}{notice&&<p role="status"><Check/>{notice}</p>}
       <footer><button type="button" onClick={()=>edit()}>Annuler</button><button className="roles-primary" disabled={!directory.data||save.isPending}><Save/>{id?'Enregistrer':'Créer le rôle'}</button></footer>
-    </form>
-  </section>
+    </form></div>
+  </ListPage>
 }

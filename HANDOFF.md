@@ -584,3 +584,19 @@ Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 t
 - À la demande de l’utilisateur, le travail en attente est commité sur la branche `feat/formateurs-creneaux-pictos`. Ni fusionné dans `main`, ni poussé, ni déployé. Les mentions « non commité » des sections précédentes sont closes par ce commit.
 - Au déploiement : appliquer `Version20261125060000` et `Version20261125070000`.
 - Fusionné dans `main` et poussé sur `origin` à la demande de l’utilisateur. Déploiement non vérifié.
+
+### Composants de liste partagés — 25 novembre 2026
+
+- Demande de l’utilisateur : des composants réutilisables, sur le modèle d’Utilisateurs. Vaut autorisation de modifier la liste Organismes (parcours protégé).
+- **Règle pour la suite : toute nouvelle liste est assemblée avec `front/src/components/list/List.tsx`** (`ListPage`, `PageHeader`, `Filters`, `SearchField`, `SelectField`, `ViewToggle`, `DataTable`, `RowActions` et actions, `ActiveBadge`, `Badge`, `OrgBadges`, `EmptyState`, `Pagination`). Styles dans `list.css` ; aucun écran ne redessine un en-tête, un tableau, un bouton ou un badge.
+- Appliqué à Organismes (vue tableau, en-tête, filtres, pagination ; les cartes restent), Utilisateurs, Rôles et permissions, Formateurs, Formations et Créneaux. `users.css` supprimé.
+- Conséquences : nombre dans chaque titre ; « Créer un rôle » passe dans l’en-tête ; sélecteur d’organisme en haut de Formations retiré (doublon du filtre) ; recherche de nouveau visible sur Formateurs ; badges d’organisme à la couleur paramétrée dans ces listes.
+- Restent à traiter : autres listes (Classes, Participants, Journal d’audit, Modèles de messages, Comptes Zoom, `CrudPage`), anciennes règles CSS devenues inutiles, cartes de chiffres d’Organismes et Rôles propres à chaque écran.
+- Vérifications : lint (un avertissement), 2 tests, build ; recette navigateur en 1440 × 900 des six écrans, pagination, filtre, état vide, réinitialisation, panneaux de modification. Petits écrans non vérifiés. Rien n’est commité.
+
+### Titres de liste — 25 novembre 2026
+
+- Demande de l’utilisateur, avec image de référence, avant tout commit : le titre de page ne porte que le nom de la rubrique ; « Liste des … (n) » coiffe la carte qui englobe le tableau ; boutons de vue libellés comme sur Créneaux.
+- `ListHeading` et les propriétés `title` / `tools` de `DataTable` portent ce titre. Le nombre est le total avant filtres. Organismes : boutons « Cartes » et « Liste » dans cet en-tête, y compris en vue cartes.
+- Vérifications : lint (un avertissement), 2 tests, build ; recette navigateur en 1440 × 900 d’Utilisateurs, Organismes (cartes), Rôles et Créneaux (liste et calendaire). Formateurs et Formations non revus à l’écran. En attente de commit.
+- Commité sur la branche `feat/composants-listes` à la demande de l’utilisateur. Ni fusionné, ni poussé. La mention « En attente de commit » est close.

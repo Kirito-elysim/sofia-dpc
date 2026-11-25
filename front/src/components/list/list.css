@@ -1,0 +1,50 @@
+.sofia-shell .sofia-main:has(.ls-page){padding:0}
+.ls-page{display:flex;flex-direction:column;gap:14px;padding:16px 20px 24px;color:#0b1035;font-family:var(--font-sans);font-size:13px;letter-spacing:-.02em}
+.ls-page :is(h1,h2,p){margin:0}
+.ls-page button{font:inherit;cursor:pointer}.ls-page button:disabled{cursor:default;opacity:.5}
+.ls-header{display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-height:56px}.ls-header>div{flex:1;min-width:220px}
+.ls-header h1{font-size:26px;font-weight:750;letter-spacing:-.04em;line-height:1.2}.ls-header p{margin-top:2px;font-size:13px}
+.ls-add{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 20px;border:0;border-radius:8px;background:linear-gradient(#0076ff,#003dff);color:#fff}.ls-page .ls-add{font-weight:550}
+.ls-add svg{width:17px;height:17px}
+.ls-filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px}
+.ls-filters label{position:relative;min-width:0;font-weight:600}
+.ls-search{flex:1.4 1 220px}.ls-select{flex:1 1 170px}.ls-select>span{display:block;margin-bottom:4px}
+.ls-filters label>svg{position:absolute;left:12px;bottom:13px;width:16px;height:16px;color:#46658f;pointer-events:none}
+.ls-filters :is(input,select){box-sizing:border-box;display:block;width:100%;height:42px;padding:0 34px 0 36px;border:1px solid #c9d6e9;border-radius:8px;background-color:#fff;font:400 13px var(--font-sans);color:inherit}
+.ls-filters :is(input,select):focus{outline:none;border-color:#879ab7;background-color:#f8faff}.ls-filters :is(input,select):focus-visible{box-shadow:0 0 0 2px #dce5f2}
+.ls-page .ls-reset{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 12px;border:0;border-radius:8px;background:none;color:#0049ff;font-weight:550;white-space:nowrap}
+.ls-reset svg{width:16px;height:16px}
+.ls-heading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;min-height:62px;box-sizing:border-box;padding:12px}
+.ls-page .ls-heading h2{font-size:18px;font-weight:750}
+.ls-views{display:flex;gap:4px}.ls-page .ls-views button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:112px;height:38px;padding:0 14px;border:1px solid #c9d6e9;border-radius:8px;background:#fff;color:#0b1035;font-weight:600}
+.ls-page .ls-views button[aria-pressed=true]{border-color:#1557F5;background:#1557F5;color:#fff}.ls-views svg{width:16px;height:16px}
+.ls-card{overflow:hidden;border:1px solid var(--card-border);border-radius:12px;background:linear-gradient(155deg,#fff,#f6f9ff);box-shadow:var(--card-shadow)}
+.ls-scroll{overflow:auto;margin:0 12px;border:1px solid #e6ecf5;border-radius:8px;background:#fff}
+.ls-table tbody tr:last-child td{border-bottom:0}
+.ls-table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}
+.ls-table th,.ls-table td{height:37px;box-sizing:border-box;padding:4px 7px;border-bottom:1px solid #e6ecf5}
+.ls-table th{background:#f1f6fc;font-weight:700}
+.ls-table th button{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:inherit;font-weight:700}.ls-table th svg{width:12px;height:12px}
+.ls-table tbody tr:hover{background:#f6f9ff}
+.ls-table .ls-check{width:34px;text-align:center}.ls-table input[type=checkbox]{width:15px;height:15px;accent-color:#0067ff;vertical-align:middle}
+.ls-table .ls-blank td{white-space:normal;text-align:center}.ls-table .ls-blank:hover{background:none}
+.ls-badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-radius:8px;font-weight:700}.ls-badge svg{width:14px;height:14px;flex:none}
+.ls-badge.green{background:#e4f8e9;color:#087d33}.ls-badge.grey{background:#eef1f5;color:#475569}.ls-badge.blue{background:#e8f1ff;color:#244e91}.ls-badge.purple{background:#f1e6fd;color:#623397}.ls-badge.orange{background:#fef3c7;color:#92500a}
+.ls-orgs{display:inline-flex;gap:4px}.ls-org{padding:2px 10px;border-radius:20px;color:#fff;font-size:11px;font-weight:600}
+.ls-org.blue{background:linear-gradient(#009cff,#0064e9)}.ls-org.purple{background:linear-gradient(#b563ec,#8a2fd0)}.ls-org.gray{background:#58647a}
+.ls-table svg.picto{width:14px;height:14px}
+.ls-clip{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.ls-actions{display:flex;gap:4px}
+.ls-page .ls-action{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 8px;border:0;border-radius:8px;font-weight:550;white-space:nowrap}
+.ls-action svg{width:14px;height:14px;flex:none}
+.ls-page .ls-action.edit{background:#f0f7ff;color:#0048ee}.ls-page .ls-action.toggle{width:98px}.ls-page .ls-action.off{background:#e9edf3;color:#0b1035}.ls-page .ls-action.on{background:#e3fad6;color:#135c04}
+.ls-page .ls-action.delete{background:#ffe8e8;color:#d10b0b}.ls-page .ls-action.locked{background:#eef1f5;color:#475569}.ls-page .ls-action.icon{width:32px;padding:0}
+.ls-empty{display:grid;justify-items:center;gap:8px;padding:30px 16px}
+.ls-empty i{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e4edfc;color:#305988}.ls-empty i svg{width:20px;height:20px}
+.ls-empty h2{font-size:18px}.ls-empty p{color:#465977}
+.ls-page .ls-empty button{margin-top:4px;padding:7px 12px;border:1px solid #b9cae6;border-radius:8px;background:#fff;color:#184d94;font-weight:650}
+.ls-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;padding:10px 12px}.ls-pages>span{margin-right:auto}
+.ls-pages select{box-sizing:border-box;height:32px;padding:0 32px 0 10px;border:1px solid #c5d2e9;border-radius:8px;background-color:#fff;font:inherit}
+.ls-page .ls-pages button,.ls-pages b{box-sizing:border-box;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid #a7c3ff;border-radius:8px;background:none;color:#0049ff}
+.ls-pages b{border:0;background:linear-gradient(#0076ff,#003dff);color:#fff}.ls-pages svg{width:16px;height:16px}
+.ls-panel{padding:16px;border:1px solid var(--card-border);border-radius:12px;background:#fff;box-shadow:var(--card-shadow)}

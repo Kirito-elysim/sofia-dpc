@@ -1,18 +1,18 @@
-.roles-work{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(320px,1fr);align-items:start;gap:18px;padding:20px;color:#101d41;background:#f7f9fd;min-height:100%}
-.roles-left{display:grid;gap:18px}.roles-work header,.roles-work button,.roles-stats>div,.roles-filters label,.roles-editor fieldset label,.roles-editor footer{display:flex;align-items:center;gap:9px}
-.roles-work svg{width:18px;height:18px;flex:none}.roles-title>svg,.roles-stats svg,.roles-card header>svg{box-sizing:content-box;padding:10px;background:#e8f2ff;color:#0565ed;border-radius:12px}.roles-title>svg{width:30px;height:30px;border-radius:50%}
-.roles-work h1,.roles-work h2,.roles-work h3,.roles-work p{margin:0}.roles-work h1{font-size:26px}.roles-work h2{font-size:18px}.roles-work h3{font-size:15px}.roles-work p{color:#4b6182;font-size:14px}
-.roles-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.roles-stats strong{display:block;font-size:22px}.roles-stats>div,.roles-card{border:1px solid var(--card-border);background:linear-gradient(145deg,#fff 60%,#f4f8ff);border-radius:12px;box-shadow:var(--card-shadow);padding:16px}.roles-stats>div{font-size:13px;padding:12px}
-.roles-work button,.roles-work select,.roles-work input:not([type=checkbox]){border:1px solid #c7d3e5;border-radius:7px;padding:7px 10px;background:white;font:inherit;color:inherit}.roles-work button{cursor:pointer}.roles-work button.roles-primary{background:#0062ef;color:white;border-color:#0062ef}.roles-card header button{margin-left:auto}.roles-filters{display:flex;gap:8px;margin:16px 0}.roles-filters label{flex:1;border:1px solid #c7d3e5;border-radius:7px;padding-left:10px;background:white}.roles-filters input:not([type=checkbox]){border:0;width:100%;min-width:0}.roles-work table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}.roles-work th{background:#eaf1fc}.roles-work th,.roles-work td{padding:9px;border-bottom:1px solid #e1e9f6}.roles-badge{background:#e8f2ff;color:#1257a4;border-radius:6px;padding:3px 6px;font-size:12px}.roles-editor{display:grid;gap:10px}.roles-name{display:grid;gap:5px;font-weight:600}.roles-editor fieldset{border:0;margin:0;padding:0}.roles-editor legend{width:100%;background:#edf3fd;padding:4px 8px;border-radius:5px;font-size:13px;font-weight:650}.roles-editor fieldset label{padding:5px 8px;border-bottom:1px solid #edf1f8;font-size:14px;cursor:pointer}.roles-editor fieldset svg{color:#43618b}.roles-editor input[role=switch]{appearance:none;margin-left:auto;width:32px;height:18px;border-radius:12px;background:#9aa8bf;padding:2px;cursor:pointer}.roles-editor input[role=switch]:before{content:'';display:block;background:white;width:14px;height:14px;border-radius:100%}.roles-editor input[role=switch]:checked{background:#0062ef}.roles-editor input[role=switch]:checked:before{transform:translateX(14px)}.roles-editor footer{justify-content:flex-end;border-top:1px solid #e0e8f5;padding-top:12px}
-@media(max-width:1050px){.roles-work{grid-template-columns:1fr}}@media(max-width:600px){.roles-work{padding:10px}.roles-stats>div{flex-direction:column;align-items:start}.roles-filters{flex-wrap:wrap}.roles-card{padding:10px}}
-
-.roles-work .roles-filters input:focus,
-.roles-work .roles-filters select:focus,
-.roles-work .roles-name input:focus { outline: none; box-shadow: none; }
-.roles-filters label:focus-within,
-.roles-work .roles-filters select:focus,
-.roles-work .roles-name input:focus { background-color: #f8faff; border-color: #879ab7; }
-.roles-work .roles-filters input { background: transparent; }
-.roles-work .od-empty button { margin-top: 4px; padding: 7px 12px; border-color: #b9cae6; color: #184d94; font-weight: 650; }
-.roles-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;font-size:14px}
-.roles-pages span{margin-right:auto}.roles-work .roles-pages button:disabled{opacity:.45;cursor:default}
+.roles-work{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);align-items:start;gap:16px}
+.roles-left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.roles-work h2,.roles-work h3{margin:0}.roles-work h2{font-size:18px}.roles-work h3{font-size:14px}
+.roles-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.roles-stats strong{display:block;font-size:22px}
+.roles-stats>div,.roles-card{border:1px solid var(--card-border);background:linear-gradient(145deg,#fff 60%,#f4f8ff);border-radius:12px;box-shadow:var(--card-shadow);padding:14px}
+.roles-stats>div,.roles-editor header,.roles-editor fieldset label,.roles-editor footer{display:flex;align-items:center;gap:9px}
+.roles-work svg{width:17px;height:17px;flex:none}.roles-stats svg,.roles-card header>svg{box-sizing:content-box;padding:10px;background:#e8f1ff;color:#005dff;border-radius:50%}
+.roles-editor{display:grid;gap:10px}.roles-name{display:grid;gap:5px;font-weight:600}
+.roles-editor :is(button,input:not([type=checkbox])){border:1px solid #c9d6e9;border-radius:8px;padding:8px 14px;background:#fff;font:inherit;color:inherit}
+.ls-page .roles-editor button.roles-primary{display:inline-flex;align-items:center;gap:8px;border:0;background:linear-gradient(#0076ff,#003dff);color:#fff}
+.roles-name input:focus{outline:none;border-color:#879ab7;background:#f8faff}
+.roles-editor fieldset{border:0;margin:0;padding:0}.roles-editor legend{width:100%;background:#f1f6fc;padding:4px 8px;border-radius:5px;font-weight:700}
+.roles-editor fieldset label{padding:5px 8px;border-bottom:1px solid #edf1f8;cursor:pointer}.roles-editor fieldset svg{color:#43618b}
+.roles-editor input[role=switch]{appearance:none;margin-left:auto;width:32px;height:18px;border-radius:12px;background:#9aa8bf;padding:2px;cursor:pointer}
+.roles-editor input[role=switch]:before{content:'';display:block;background:white;width:14px;height:14px;border-radius:100%}
+.roles-editor input[role=switch]:checked{background:#005dff}.roles-editor input[role=switch]:checked:before{transform:translateX(14px)}
+.roles-editor footer{justify-content:flex-end;border-top:1px solid #e0e8f5;padding-top:12px}
+@media(max-width:1100px){.roles-work{grid-template-columns:1fr}}

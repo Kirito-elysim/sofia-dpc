@@ -1,10 +1,8 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {ArrowUpDown,CalendarDays,ChevronDown,ChevronLeft,ChevronRight,Filter,Info,List,Pencil,Plus,Save,Search,SearchX,Trash2,X} from 'lucide-react'
+import {CalendarDays,Info,List,Save,Trash2,X} from 'lucide-react'
 import {api} from '../api'
-import {ActivationActionIcon,ActivationStatusIcon} from '../components/ActivationIcons'
-import './organizations.css'
-import './organization-list.css'
+import {ActiveBadge,DataTable,DeleteAction,EditAction,EmptyState,Filters,ListHeading,ListPage,PageHeader,RowActions,SearchField,SelectField,ToggleAction,ViewToggle} from '../components/list/List'
 import './time-slots.css'
 
 type Slot={id:number;label:string;startTime:string;endTime:string;durationMin:number;active:boolean}
@@ -17,41 +15,43 @@ export default function TimeSlots({canWrite}:{canWrite:boolean}) {
   const list=useQuery({queryKey:['time-slots'],queryFn:()=>api<Slot[]>('/time-slots')})
   const usage=useQuery({queryKey:['time-slot-usage'],queryFn:()=>api<number[]>('/time-slot-usage')})
   const [query,setQuery]=useState(''),[status,setStatus]=useState(''),[view,setView]=useState<'list'|'calendar'>('list')
-  const [sort,setSort]=useState<{key:'label'|'startTime'|'endTime';dir:number}>({key:'startTime',dir:1})
-  const [page,setPage]=useState(1),[size,setSize]=useState(10),[checked,setChecked]=useState<number[]>([])
   const [editing,setEditing]=useState<Slot|'new'|null>(null),[removing,setRemoving]=useState<Slot|null>(null)
   const change=useMutation({mutationFn:({slot,remove}:{slot:Slot;remove?:boolean})=>remove?api('/time-slots/'+slot.id,{method:'DELETE'}):patch(slot.id,{active:!slot.active}),
     onSuccess:()=>{setRemoving(null);void client.invalidateQueries()}})
   const rows=list.data??[]
-  const filtered=rows.filter(s=>(!status||String(s.active)===status)&&s.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-    .sort((a,b)=>a[sort.key].localeCompare(b[sort.key],'fr')*sort.dir)
-  const last=Math.max(1,Math.ceil(filtered.length/size)),current=Math.min(page,last),shown=filtered.slice((current-1)*size,current*size)
-  const reset=()=>{setQuery('');setStatus('');setPage(1)}
+  const filtered=rows.filter(slot=>(!status||String(slot.active)===status)&&slot.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+    .sort((x,y)=>x.startTime.localeCompare(y.startTime))
+  const reset=()=>{setQuery('');setStatus('')}
   const open=(slot:Slot|'new')=>{change.reset();setEditing(slot)}
+  const views=<ViewToggle value={view} onChange={setView} options={[{key:'list',label:'Liste',Icon:List},{key:'calendar',label:'Calendaire',Icon:CalendarDays}]}/>
   const used=removing?usage.data?.includes(removing.id):false
-  const sortable=(key:typeof sort.key,label:string)=><th scope="col" aria-sort={sort.key===key?(sort.dir>0?'ascending':'descending'):'none'}><button type="button" onClick={()=>setSort({key,dir:sort.key===key?-sort.dir:1})}>{label}<ArrowUpDown aria-hidden="true"/></button></th>
-  return <section className={'slots'+(editing?' with-panel':'')}>
+  return <ListPage className={'slots'+(editing?' with-panel':'')}>
     <div className="slots-main">
-      <header className="slots-title"><i><CalendarDays aria-hidden="true"/></i><div><h1>Créneaux</h1><p>Définissez les plages horaires disponibles pour les classes virtuelles.</p></div>{canWrite&&<button type="button" className="slots-primary" onClick={()=>open('new')}><Plus/>Ajouter un créneau</button>}</header>
-      <div className="slots-card slots-filters">
-        <label><Search aria-hidden="true"/><input aria-label="Rechercher un créneau" placeholder="Rechercher un créneau…" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></label>
-        <label><Filter aria-hidden="true"/><select aria-label="Statut" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Tous les statuts</option><option value="true">Actif</option><option value="false">Inactif</option></select><ChevronDown aria-hidden="true"/></label>
-      </div>
-      <div className="slots-card">
-        <div className="slots-head"><h2>Liste des créneaux ({filtered.length})</h2><div role="group" aria-label="Affichage">{([['list',List,'Liste'],['calendar',CalendarDays,'Calendaire']] as const).map(([key,Icon,label])=><button key={key} type="button" aria-pressed={view===key} onClick={()=>setView(key)}><Icon aria-hidden="true"/>{label}</button>)}</div></div>
-        {list.error&&<p role="alert">{list.error.message}</p>}{!removing&&change.error&&<p role="alert">{change.error.message}</p>}
-        {list.isLoading&&<p role="status">Chargement…</p>}
-        {list.data&&!filtered.length?<div className="od-empty" role="status"><i><SearchX aria-hidden="true"/></i><h2>{rows.length?'Aucun résultat pour ce filtre':'Aucun créneau'}</h2>{rows.length>0&&<><p>Aucun créneau ne correspond à votre recherche ou à votre filtre.</p><button type="button" onClick={reset}>Réinitialiser les filtres</button></>}</div>
-        :view==='calendar'?<ul className="slots-day" aria-label="Créneaux sur la journée">{filtered.map(s=><li key={s.id}><span>{s.label}</span><div><b className={s.active?'':'off'} style={{left:minutes(s.startTime)/14.4+'%',width:s.durationMin/14.4+'%'}} title={`${s.startTime} – ${s.endTime}`}/></div><small>{s.startTime} – {s.endTime}</small></li>)}<li className="slots-hours" aria-hidden="true"><span/><div>{[0,6,12,18,24].map(h=><em key={h} style={{left:h/.24+'%'}}>{h} h</em>)}</div><small/></li></ul>
-        :list.data&&<><div className="slots-scroll"><table><thead><tr><th scope="col"><input type="checkbox" aria-label="Sélectionner la page" checked={shown.length>0&&shown.every(s=>checked.includes(s.id))} onChange={e=>setChecked(e.target.checked?[...new Set([...checked,...shown.map(s=>s.id)])]:checked.filter(id=>!shown.some(s=>s.id===id)))}/></th>{sortable('label','Libellé')}{sortable('startTime','Heure de début')}{sortable('endTime','Heure de fin')}<th scope="col">Durée</th><th scope="col">Statut</th>{canWrite&&<th scope="col">Actions</th>}</tr></thead>
-          <tbody>{shown.map(s=><tr key={s.id}><td><input type="checkbox" aria-label={'Sélectionner '+s.label} checked={checked.includes(s.id)} onChange={()=>setChecked(checked.includes(s.id)?checked.filter(id=>id!==s.id):[...checked,s.id])}/></td><td>{s.label}</td><td>{s.startTime}</td><td>{s.endTime}</td><td>{duration(s.durationMin)}</td><td><span className={'slots-state'+(s.active?' on':'')}><ActivationStatusIcon active={s.active}/>{s.active?'Actif':'Inactif'}</span></td>
-            {canWrite&&<td className="oa"><div className="oa-actions directory-row-actions"><button type="button" aria-label={'Modifier '+s.label} onClick={()=>open(s)}><Pencil aria-hidden="true"/>Modifier</button><button type="button" className={s.active?'neutral':'green'} disabled={change.isPending} onClick={()=>change.mutate({slot:s})}><ActivationActionIcon active={s.active}/>{s.active?'Désactiver':'Activer'}</button><button type="button" className="red" aria-label={'Supprimer '+s.label} disabled={!usage.data} onClick={()=>{change.reset();setRemoving(s)}}><Trash2 aria-hidden="true"/>Supprimer</button></div></td>}</tr>)}</tbody></table></div>
-          <footer><span>Affichage de {(current-1)*size+1} à {(current-1)*size+shown.length} sur {filtered.length} {filtered.length>1?'créneaux':'créneau'}</span><select aria-label="Résultats par page" value={size} onChange={e=>{setSize(Number(e.target.value));setPage(1)}}>{[10,25,50].map(n=><option key={n} value={n}>{n} par page</option>)}</select><button type="button" aria-label="Précédent" disabled={current===1} onClick={()=>setPage(current-1)}><ChevronLeft/></button><b aria-current="page">{current}</b><button type="button" aria-label="Suivant" disabled={current===last} onClick={()=>setPage(current+1)}><ChevronRight/></button></footer></>}
-      </div>
+      <PageHeader icon="calendar" title="Créneaux" subtitle="Définissez les plages horaires disponibles pour les classes virtuelles." add={canWrite?{label:'Ajouter un créneau',onClick:()=>open('new')}:undefined}/>
+      <Filters onReset={reset}>
+        <SearchField label="Rechercher un créneau" value={query} onChange={setQuery}/>
+        <SelectField label="Statut" icon="done" all="Tous les statuts" value={status} onChange={setStatus} options={[{value:'true',label:'Actif'},{value:'false',label:'Inactif'}]}/>
+      </Filters>
+      {list.error&&<p role="alert">{list.error.message}</p>}{!removing&&change.error&&<p role="alert">{change.error.message}</p>}
+      {view==='calendar'?<div className="ls-card"><ListHeading title="Liste des créneaux" count={rows.length} tools={views}/><ul className="slots-day" aria-label="Créneaux sur la journée">{filtered.map(s=><li key={s.id}><span>{s.label}</span><div><b className={s.active?'':'off'} style={{left:minutes(s.startTime)/14.4+'%',width:s.durationMin/14.4+'%'}} title={`${s.startTime} – ${s.endTime}`}/></div><small>{s.startTime} – {s.endTime}</small></li>)}<li className="slots-hours" aria-hidden="true"><span/><div>{[0,6,12,18,24].map(h=><em key={h} style={{left:h/.24+'%'}}>{h} h</em>)}</div><small/></li></ul></div>
+      :<DataTable title="Liste des créneaux" tools={views} rows={filtered} total={rows.length} loading={list.isLoading} filterKey={query+'|'+status} rowKey={s=>s.id} rowName={s=>s.label}
+        columns={[
+          {key:'label',label:'Libellé',sort:s=>s.label,render:s=><strong>{s.label}</strong>},
+          {key:'startTime',label:'Heure de début',sort:s=>s.startTime,render:s=>s.startTime},
+          {key:'endTime',label:'Heure de fin',sort:s=>s.endTime,render:s=>s.endTime},
+          {key:'duration',label:'Durée',sort:s=>s.durationMin,render:s=>duration(s.durationMin)},
+          {key:'active',label:'Statut',sort:s=>String(s.active),render:s=><ActiveBadge active={s.active}/>},
+        ]}
+        actions={canWrite?s=><RowActions>
+          <EditAction aria-label={'Modifier '+s.label} onClick={()=>open(s)}/>
+          <ToggleAction active={s.active} disabled={change.isPending} onClick={()=>change.mutate({slot:s})}/>
+          <DeleteAction aria-label={'Supprimer '+s.label} disabled={!usage.data} onClick={()=>{change.reset();setRemoving(s)}}/>
+        </RowActions>:undefined}
+        empty={rows.length?<EmptyState title="Aucun résultat pour ce filtre" text="Aucun créneau ne correspond à votre recherche ou à votre filtre." action={{label:'Réinitialiser les filtres',onClick:reset}}/>:<EmptyState title="Aucun créneau"/>}/>}
     </div>
     {editing&&<Panel key={editing==='new'?'new':editing.id} slot={editing==='new'?null:editing} close={()=>setEditing(null)}/>}
     {removing&&<Confirm used={!!used} slot={removing} pending={change.isPending} error={change.error?.message} close={()=>setRemoving(null)} confirm={()=>change.mutate({slot:removing,remove:!used})}/>}
-  </section>
+  </ListPage>
 }
 
 function Panel({slot,close}:{slot:Slot|null;close:()=>void}) {
