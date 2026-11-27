@@ -91,6 +91,7 @@ final class ZoomGateway
     }
 
 
+    /** @param array<string, mixed> $options */
     private function request(ZoomAccount $account, string $method, string $url, array $options): \Symfony\Contracts\HttpClient\ResponseInterface
     {
         if (($connection=$account->oauthConnectionId()) !== null) {
@@ -109,6 +110,7 @@ final class ZoomGateway
         return $response;
     }
 
+    /** @return array{string, string} registrant id and join URL */
     public function register(ZoomAccount $account,string $meeting,string $first,string $last,string $email): array
     {
         $result=$this->request($account,'POST','https://api.zoom.us/v2/meetings/'.rawurlencode($meeting).'/registrants',[

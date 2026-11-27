@@ -50,11 +50,18 @@ final class ZoomOAuth
         return $plain;
     }
 
+    /** @return array<string, mixed> */
     public function app(): array
     {
         return $this->db->fetchAssociative('SELECT * FROM zoom_oauth_app WHERE id=1') ?: throw new \RuntimeException('Configurez l’application OAuth Sofia.');
     }
 
+    /**
+     * @param array<string, mixed> $app
+     * @param array<string, mixed> $body
+     *
+     * @return array<string, mixed>
+     */
     private function exchange(array $app,array $body): array
     {
         $tokens=$this->http->request('POST','https://zoom.us/oauth/token',[
@@ -102,6 +109,11 @@ final class ZoomOAuth
         });
     }
 
+    /**
+     * @param array<string, mixed> $query
+     *
+     * @return array<string, mixed>
+     */
     public function get(string $path,string $token,array $query=[]): array
     {
         return $this->http->request('GET','https://api.zoom.us/v2'.$path,[

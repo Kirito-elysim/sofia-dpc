@@ -6,6 +6,7 @@ final class ClassPolicy
 {
     public const DEFAULT = ['passcode'=>false, 'waitingRoom'=>true, 'joinBeforeHost'=>false, 'recording'=>'account_default'];
 
+    /** @return array<string, mixed> */
     public static function validate(mixed $policy): array
     {
         if (!is_array($policy) || !is_bool($policy['passcode'] ?? null) || !is_bool($policy['waitingRoom'] ?? null)
@@ -21,6 +22,12 @@ final class ClassPolicy
         return array_intersect_key($policy,self::DEFAULT);
     }
 
+    /**
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $policy
+     *
+     * @return array<string, mixed>
+     */
     public static function apply(array $body,array $policy): array
     {
         $body['settings']['waiting_room']=$policy['waitingRoom'];
@@ -37,6 +44,11 @@ final class ClassPolicy
         return $body;
     }
 
+    /**
+     * @param array<string, mixed> $meeting
+     *
+     * @return array<string, mixed>
+     */
     public static function effective(array $meeting): array
     {
         return [

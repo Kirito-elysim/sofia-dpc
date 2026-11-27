@@ -6,6 +6,8 @@ parameters:
         - public/
         - src/
         - tests/
+    # Tests call the same method twice to prove idempotence: its second result is not already known.
+    rememberPossiblyImpureFunctionValues: false
     ignoreErrors:
         - { identifier: property.unusedType, path: src/Entity } # Doctrine assigns ids
         - { identifier: function.alreadyNarrowedType, path: tests/bootstrap.php }

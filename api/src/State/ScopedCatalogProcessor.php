@@ -7,8 +7,10 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Security\OrganizationScope;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/** @implements ProcessorInterface<mixed, mixed> */
 final class ScopedCatalogProcessor implements ProcessorInterface
 {
+    /** @param ProcessorInterface<mixed, mixed> $persist */
     public function __construct(
         private OrganizationScope $scope,
         #[Autowire(service: 'api_platform.doctrine.orm.state.persist_processor')] private ProcessorInterface $persist,

@@ -13,6 +13,7 @@ final class OrganizationScope
 {
     public function __construct(private Security $security, private EntityManagerInterface $em) {}
 
+    /** @return list<int>|null null: every organization */
     public function ids(): ?array
     {
         $user = $this->security->getUser();

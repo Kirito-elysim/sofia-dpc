@@ -27,6 +27,7 @@ class ClassSlot extends SoftDeletable
     #[ORM\Column(length: 20, nullable: true)]
     public ?string $meetingNumber = null;
 
+    /** @var array<string, mixed>|null */
     #[ORM\Column(type: 'json', nullable: true)]
     public ?array $zoomPolicy = null;
 

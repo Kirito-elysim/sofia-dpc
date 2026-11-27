@@ -99,6 +99,7 @@ final class VirtualClassConfigController extends AbstractController
         return $this->json(['id'=>$saved]);
     }
 
+    /** @return list<int> */
     private function ids(mixed $values): array
     {
         if (!is_array($values) || !array_is_list($values)) {

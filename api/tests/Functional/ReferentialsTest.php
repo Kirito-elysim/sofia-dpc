@@ -37,7 +37,7 @@ class ReferentialsTest extends WebTestCase
     /**
      * @param array<string, mixed> $body
      *
-     * @return array<string, mixed>
+     * @return array<mixed> a record or a list
      */
     private function call(string $method, string $uri, array $body = []): array
     {

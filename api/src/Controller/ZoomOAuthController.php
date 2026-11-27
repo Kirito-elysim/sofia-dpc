@@ -81,6 +81,7 @@ final class ZoomOAuthController extends AbstractController
         return $this->redirect('/settings/zoom-accounts?zoom=error');
     }
 
+    /** @return array{hosts: array<array{id: string, label: string, email: ?string}>, next: string} */
     private function hosts(ZoomOAuth $oauth,int $id,string $page): array
     {
         $result=$oauth->get('/users',$oauth->token($id),['status'=>'active','page_size'=>100,'next_page_token'=>$page]);
@@ -185,6 +186,7 @@ final class ZoomOAuthController extends AbstractController
         return $this->json(['id'=>$id],201);
     }
 
+    /** @return array<string, mixed> */
     private function lockOrganization(Connection $db,int $organization): array
     {
         $db->executeQuery("SELECT pg_advisory_xact_lock(hashtext('virtual-class-config'))");
@@ -195,6 +197,10 @@ final class ZoomOAuthController extends AbstractController
         return $org;
     }
 
+    /**
+     * @param array<string, mixed> $org
+     * @param list<int>        $ids
+     */
     private function attachHosts(Connection $db,int $organization,array $org,array $ids): void
     {
         $config=$org['virtual_class_config_id'];

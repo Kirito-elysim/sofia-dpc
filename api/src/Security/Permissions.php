@@ -6,6 +6,7 @@ use App\Entity\User;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
+/** @extends Voter<string, mixed> */
 final class Permissions extends Voter
 {
     public const READ = [
@@ -31,6 +32,11 @@ final class Permissions extends Voter
         'EDIT_CONFIGS' => ['CONFIGS'],
     ];
 
+    /**
+     * @param array<string> $permissions
+     *
+     * @return list<string>
+     */
     public static function expand(array $permissions): array
     {
         $expanded = $permissions;
@@ -40,6 +46,7 @@ final class Permissions extends Voter
         return array_values(array_unique($expanded));
     }
 
+    /** @return list<string> */
     public static function forUser(User $user): array
     {
         if ($user->customRole) {
