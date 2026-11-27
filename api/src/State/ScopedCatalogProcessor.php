@@ -63,6 +63,8 @@ final class ScopedCatalogProcessor implements ProcessorInterface
                         throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Ce public cible a été supprimé.');
                     }
                 }
+                $data->refreshReference();
+
                 return $this->persist->process($data, $operation, $uriVariables, $context);
             });
         }

@@ -76,6 +76,7 @@
 .formation-status {display:grid;gap:3px;justify-items:center}
 .formation-status [data-publication] {padding:3px 8px;border-radius:12px;background:#eef0f4;color:#455269}
 .formation-status [data-publication=draft] {background:#fff0cd;color:#734806}
+.formation-status [data-publication=unpublished] {background:#e8f1ff;color:#174ca6}
 .formation-status [data-publication=published] {background:#def5e4;color:#175933}
 .formation-stats > button:hover {border-color:#88aafa}
 .formation-stats > button[aria-pressed=true] {border-color:#1557f5;background:#f1f6ff}

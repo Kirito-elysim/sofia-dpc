@@ -14,15 +14,100 @@
 .tw footer {position:sticky;bottom:0;z-index:2;background:#fff;border-top:1px solid #dbe2ed;padding:12px;flex-wrap:wrap}.tw footer button:first-of-type {margin-right:auto}.tw footer svg {width:16px}.tw footer [role=alert] {width:100%;color:#a51837}
 @media(max-width:1000px){.tw-header {flex-wrap:wrap}.tw-header ol {flex-basis:100%;margin:4px 0}.tw-layout {grid-template-columns:minmax(0,1.6fr) minmax(215px,1fr)}}
 @media(max-width:700px){.tw-layout,.tw-fields {grid-template-columns:1fr}.tw-header li {font-size:10px}.tw footer button {font-size:12px;padding:7px}.tw-code {flex-wrap:wrap}}
-.tw-summary article {display:flex;align-items:center;gap:12px;border-top:1px solid #dbe2ed;padding:16px 0;flex-wrap:wrap}
-.tw-summary article>div {flex:1 1 180px;min-width:0}
-.tw-summary p {margin-top:4px;white-space:pre-line;overflow-wrap:anywhere;color:#465974}
-.tw-summary article>span {background:#e8f1ff;color:#174ca6;border-radius:15px;padding:4px 9px;font-size:12px}
 .tw progress {display:block;width:100%;margin-top:8px;accent-color:var(--accent)}
-.tw-review-checks {display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.tw-review-checks ul {padding-left:18px;line-height:1.8}
 .tw-checks {display:flex;flex-wrap:wrap;margin-bottom:16px}
 .tw-checks label {flex:1 1 110px;align-items:center;padding:14px;border:1px solid #cdd7e7;border-radius:8px;cursor:pointer}
 .tw-checks label:has(:checked) {border-color:var(--accent);background:#f0f7ff}
 .tw .uc-org-options button {border:0}
 .tw .uc-orgs small {text-align:left}
+
+/* Same writing as the organisation creation screen (organization-wizard.css). */
+.tw {color:#101d41;font:15px/1.2 var(--font-sans);letter-spacing:normal}
+.tw-header p,.tw aside p {color:inherit;line-height:1.35}.tw-header p {margin-top:4px}
+#root .tw h2 {font-size:clamp(21px,1.65vw,29px);line-height:1.18;letter-spacing:-.035em}
+.tw label,.tw-fields b,.tw .uc-orgs legend,.tw dt {font-size:14px;font-weight:600}
+.tw input:not([type=checkbox]),.tw select,.tw textarea {font-size:14px;font-weight:400;min-height:38px;border-color:#bdc9dc;border-radius:7px;background-color:#fff;padding-inline:12px}
+.tw select,.tw .uc-org-select summary {min-height:42px;font-weight:400}
+.tw small,.tw .uc-orgs small,.tw .tw-duration label {font-size:12px;font-weight:400;color:#46658f}
+.tw em {color:#bc274a;font-style:normal}
+
+/* Field help and summary facts: written to training-wizard.css, which no screen imports. */
+.tw .tw-field-help {margin:4px 0 6px;text-align:left;font-size:12px;font-weight:400;line-height:1.4}
+.tw-duration > div {flex:1;min-width:0}
+
+
+/* Preview card: identity, then description, then the key facts as tiles. */
+.tw aside .tw-picture+.tw-tags {margin-top:14px}
+.tw-tags span {background:#e8f1ff;border-color:#e8f1ff;color:#174ca6;font-weight:600}
+.tw aside h3 {margin:8px 0 0;line-height:1.25}
+.tw aside .tw-excerpt {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;margin-top:6px;white-space:pre-line}
+.tw aside .tw-excerpt.empty {color:#7a8ca8}
+.tw .tw-facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 0}
+.tw .tw-facts>div {display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-content:center;padding:10px;border:1px solid var(--card-border);border-radius:10px;background:#fff}
+.tw .tw-facts>.wide {grid-column:1/-1}
+.tw-facts svg {grid-row:span 2;align-self:center;box-sizing:border-box;width:32px;height:32px;padding:7px;border-radius:8px;background:#e8f1ff;color:var(--accent)}
+.tw .tw-facts dt {font-size:12px;font-weight:400;color:#46658f}
+.tw .tw-facts dd {margin:2px 0 0;font-size:14px;font-weight:600}
+.tw .tw-facts dd.empty {font-weight:400;color:#7a8ca8}
+
+/* Funding step: one card per funding, then what each one asks for. */
+.tw-funding {display:grid;gap:14px}
+.tw-funds {display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tw .tw-funds label {display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #cdd7e7;border-radius:10px;background:#fff;cursor:pointer}
+.tw .tw-funds label:has(:checked) {border-color:var(--accent);background:#f0f7ff}
+.tw-funds input {width:16px;height:16px;margin:1px 0 0;accent-color:var(--accent)}
+.tw-funds strong,.tw .tw-funds small {display:block;text-align:left}.tw .tw-funds small {margin-top:3px}
+.tw .tw-org-codes {--org:#005dff;min-width:0;margin:10px 0 0;padding:8px 14px 12px;border:1px solid var(--card-border);border-left:4px solid var(--org);border-radius:10px;background:#fff}
+.tw .tw-org-codes[data-color=purple] {--org:#8144cc}.tw .tw-org-codes[data-color=gray] {--org:#58647a}
+.tw-org-codes legend {padding:0 6px;font-weight:700;color:var(--org)}
+.tw .tw-org-codes>small {display:block;text-align:left}
+.tw-org-codes .tw-code {align-items:flex-end}.tw-org-codes .tw-code label:first-child {flex:0 0 110px}.tw-org-codes .tw-code label:nth-child(2) {flex:1 1 180px}
+.tw-funding-note {padding:12px 14px;border:1px dashed #cdd7e7;border-radius:10px}.tw .tw-funding-note p {margin-top:4px;font-size:13px;color:#46658f}
+.tw .tw-warning {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;border-radius:8px;background:#fef3c7;color:#92500a}
+.tw-funding .tw-code {display:grid;grid-template-columns:100px repeat(auto-fit,minmax(140px,1fr));align-items:end}
+.tw-funding .tw-code label {min-width:0}
+
+/* Funding accordion. */
+.tw-accordion {border:1px solid var(--card-border);border-radius:10px;background:#fff;overflow:hidden}
+.tw .tw-accordion h3 {font-size:15px}
+.tw .tw-accordion h3 button {width:100%;justify-content:flex-start;gap:10px;padding:12px 14px;border:0;border-radius:0}
+.tw .tw-accordion h3 button:hover,.tw .tw-accordion h3 button[aria-expanded=true] {background:#f0f7ff}
+.tw-accordion h3 span {margin-left:auto;padding:3px 10px;border-radius:15px;background:#fef3c7;color:#92500a;font-size:12px;font-weight:600}
+.tw-accordion h3 span.done {background:#e4f8e9;color:#087d33}
+.tw-accordion h3 svg {width:18px;height:18px;transition:transform .15s}.tw-accordion h3 [aria-expanded=true] svg {transform:rotate(180deg)}
+.tw-accordion>div {padding:2px 12px 12px;border-top:1px solid var(--card-border)}
+
+/* Validation step: progress on the left, the formation as a visual sheet on the right. */
+.tw-layout.review {grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.tw-reviews {display:grid;gap:14px}
+.tw-score {display:flex;align-items:center;gap:20px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#0a2552,#1557f5);color:#fff}
+.tw .tw-score h3 {font-size:19px}.tw .tw-score p {margin-top:4px;color:#d6e4ff}
+.tw-ring {flex:none;display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:radial-gradient(closest-side,#10367f 76%,transparent 78%),conic-gradient(#5ee08a calc(var(--value)*1%),#ffffff33 0)}
+.tw-ring strong {font-size:22px}
+.tw-review {--state:#d97706;min-width:0;padding:14px 16px;border:1px solid var(--card-border);border-left:5px solid var(--state);border-radius:12px;background:#fff}
+.tw-review.done {--state:#2e9e44}
+.tw-review>header {display:flex;align-items:center;gap:12px}
+.tw-review>header>svg {box-sizing:border-box;flex:none;width:42px;height:42px;padding:10px;border-radius:12px;background:#e8f1ff;color:var(--accent)}
+.tw-review>header>div {margin-right:auto;min-width:0}.tw .tw-review>header h3 {font-size:16px}.tw .tw-review>header small {text-align:left}
+.tw .tw-review>header button {padding:5px 11px;font-size:13px;color:#0048ee}.tw-review>header button svg {width:14px;height:14px}
+.tw-segments {display:flex;gap:4px;margin:12px 0}.tw-segments i {flex:1;height:6px;border-radius:6px;background:#fde3b0}.tw-segments i.on {background:#2e9e44}
+.tw-review ul {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.tw-review li {display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:15px;font-size:12px;font-weight:600}
+.tw-review li svg {width:14px;height:14px}.tw-review li.done {background:#e4f8e9;color:#087d33}.tw-review li.todo {background:#fef3c7;color:#92500a}
+.tw .tw-publish {display:flex;align-items:center;gap:14px;margin:0;padding:14px 16px;border:1px solid #bcd4ff;border-radius:12px;background:#e8f1ff;color:#174ca6;cursor:pointer}.tw-publish strong {display:block;font-size:15px}.tw .tw-publish small {display:block;margin-top:2px;text-align:left;line-height:1.35}
+.tw .tw-publish input {appearance:none;position:relative;flex:none;width:46px;height:26px;min-height:0;margin:0;padding:0;border:0;border-radius:20px;background:#b6c3d8;cursor:pointer;transition:background .15s}
+.tw .tw-publish input:after {content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.tw .tw-publish input:checked {background:#1557f5}.tw .tw-publish input:checked:after {transform:translateX(20px)}.tw .tw-publish input:focus-visible {outline:3px solid #1557f5;outline-offset:2px}
+.tw-cover {position:relative;display:grid;place-items:center;aspect-ratio:2.4/1;overflow:hidden;border-radius:12px;background:linear-gradient(135deg,#0a2552,#1557f5 65%,#58a6ff);color:#ffffffb3}
+.tw-cover>svg {width:64px;height:64px}.tw-cover img {width:100%;height:100%;object-fit:cover}
+.tw-cover span {position:absolute;left:12px;bottom:12px;padding:4px 12px;border-radius:16px;background:#fff;color:#174ca6;font-size:12px;font-weight:700}
+.tw .tw-sheet h3 {margin:14px 0 8px;font-size:22px;line-height:1.25}
+.tw-text {margin-top:14px;padding-left:12px;border-left:3px solid #cfe0ff}.tw .tw-text h4 {margin:0;font-size:12px;font-weight:600;color:#46658f}.tw .tw-text p {margin-top:3px;white-space:pre-line;overflow-wrap:anywhere;color:inherit}
+.tw-money {margin-top:16px}.tw .tw-money h4 {display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:15px;font-weight:700}.tw-money h4 svg {width:18px;color:var(--accent)}
+.tw-line {padding:10px 12px;border:1px solid var(--card-border);border-radius:10px;background:#fff}.tw-line+.tw-line {margin-top:8px}
+.tw .tw-line>p {display:flex;align-items:center;justify-content:space-between;margin:0;font-weight:700;color:inherit}
+.tw .tw-line dl {display:flex;flex-wrap:wrap;gap:8px 22px;margin:8px 0 0}.tw .tw-line dl>div {padding:0;border:0}.tw .tw-line dt {font-size:11px;font-weight:400;color:#46658f}.tw .tw-line dd {margin:1px 0 0;font-weight:700}
+.tw .tw-none {margin:0;color:#7a8ca8}
+@media(max-width:1000px){.tw-layout.review {grid-template-columns:1fr}}
+.tw progress {appearance:none;height:8px;border:0;border-radius:8px;overflow:hidden;background:#e4ecf8}
+.tw progress::-webkit-progress-bar {background:#e4ecf8}.tw progress::-webkit-progress-value {background:linear-gradient(90deg,#0076ff,#003dff);border-radius:8px}.tw progress::-moz-progress-bar {background:#1557f5}

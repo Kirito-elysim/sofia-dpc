@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /** "Formation". */
 #[ORM\Entity]
@@ -40,13 +41,40 @@ class Formation extends SoftDeletable
     #[ORM\Column(length: 100, nullable: true), Groups('write'), Assert\Length(max: 100)]
     public ?string $audience = null;
 
-    /** @var list<array{year: int, code: string}> */
+    // Amounts and hours travel as decimal strings. Drafts may leave anything but the year empty.
+    private const AMOUNT = '/\A\d{1,8}(\.\d{1,2})?\z/';
+
+    /** @var list<array<string, int|string>> DPC action number, price and support per organization and year */
     #[ORM\Column(type: 'json', options: ['default' => '[]']), Groups(['read', 'write'])]
     #[Assert\All([new Assert\Collection(fields: [
+        'organization' => new Assert\Optional([new Assert\Type('integer'), new Assert\Positive()]),
         'year' => [new Assert\Type('integer'), new Assert\Range(min: 1000, max: 9999)],
-        'code' => [new Assert\Type('string'), new Assert\NotBlank(), new Assert\Length(max: 100)],
+        'code' => new Assert\Optional([new Assert\Type('string'), new Assert\Length(max: 100)]),
+        'priceHT' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
+        'andpcSupport' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
     ])])]
     public array $andpcCodes = [];
+
+    /** @var list<array<string, int|string>> FIFPL code, hours and price per organization and year */
+    #[ORM\Column(type: 'json', options: ['default' => '[]']), Groups(['read', 'write'])]
+    #[Assert\All([new Assert\Collection(fields: [
+        'organization' => new Assert\Optional([new Assert\Type('integer'), new Assert\Positive()]),
+        'year' => [new Assert\Type('integer'), new Assert\Range(min: 1000, max: 9999)],
+        'code' => new Assert\Optional([new Assert\Type('string'), new Assert\Length(max: 100)]),
+        'priceHT' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
+        'durationHours' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
+    ])])]
+    public array $fifplCodes = [];
+
+    /** @var list<array<string, int|string>> self-funded prices per organization and year */
+    #[ORM\Column(type: 'json', options: ['default' => '[]']), Groups(['read', 'write'])]
+    #[Assert\All([new Assert\Collection(fields: [
+        'organization' => new Assert\Optional([new Assert\Type('integer'), new Assert\Positive()]),
+        'year' => [new Assert\Type('integer'), new Assert\Range(min: 1000, max: 9999)],
+        'priceHT' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
+        'priceTTC' => new Assert\Optional([new Assert\Type('string'), new Assert\Regex(self::AMOUNT)]),
+    ])])]
+    public array $personalPrices = [];
 
     #[ORM\Column(type: 'text', nullable: true), Groups(['formation:image', 'write'])]
     #[Assert\Length(max: 200000)]
@@ -58,7 +86,8 @@ class Formation extends SoftDeletable
     public ?string $modality = null;
 
     #[ORM\Column(length: 16, options: ['default' => 'draft']), Groups(['read', 'write'])]
-    #[Assert\Choice(choices: ['draft', 'published', 'archived'])]
+    // unpublished: complete but not offered, and inactive. draft: still in the creation steps.
+    #[Assert\Choice(choices: ['draft', 'unpublished', 'published', 'archived'])]
     public string $publicationStatus = 'draft';
 
     #[ORM\Column(type: 'text', nullable: true), Groups(['read', 'write']), Assert\Length(max: 5000)]
@@ -86,13 +115,19 @@ class Formation extends SoftDeletable
     #[ORM\ManyToMany(targetEntity: Organization::class), ORM\JoinTable(name: 'formation_additional_organization')]
     private \Doctrine\Common\Collections\Collection $additionalOrganizations;
 
+    // The formation's own part of the reference; its title is used when empty.
     #[ORM\Column(length: 255, nullable: true), Groups(['read', 'write']), Assert\Length(max: 255)]
-    public ?string $customReference = null;
+    public ?string $acronym = null;
+
+    // In euros, kept as a decimal string: no float rounding on money.
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true), Groups(['read', 'write'])]
+    #[Assert\Regex('/\A\d{1,8}(\.\d{1,2})?\z/', message: 'Prix invalide.')]
+    public ?string $price = null;
 
     public function __construct(
         #[ORM\ManyToOne, ORM\JoinColumn(nullable: false), Groups(['read', 'write']), Assert\NotNull] public Organization $organization,
         #[ORM\Column(length: 255), Groups(['read', 'write']), Assert\NotBlank, Assert\Length(max: 255)] public string $title,
-        #[ORM\Column(length: 50, nullable: true)] private ?string $reference = null,
+        #[ORM\Column(length: 300, nullable: true)] private ?string $reference = null,
         #[ORM\Column(nullable: true), Groups(['read', 'write']), Assert\Positive] public ?int $totalDurationMin = null,
         // Default seat count copied onto each new class (20 today, variable per formation).
         #[ORM\Column, Groups(['read', 'write']), Assert\Positive] public int $defaultCapacity = 20,
@@ -100,6 +135,22 @@ class Formation extends SoftDeletable
         #[ORM\Column(length: 100, nullable: true), Groups(['read', 'write']), Assert\Length(max: 100)] public ?string $theme = null,
     ) {
         $this->additionalOrganizations = new \Doctrine\Common\Collections\ArrayCollection();
+    }
+
+    #[Assert\Callback]
+    public function validateFundingOrganizations(ExecutionContextInterface $context): void
+    {
+        $ids = [$this->organization->getId(), ...$this->additionalOrganizations->map(static fn (Organization $o) => $o->getId())->toArray()];
+        foreach (['andpcCodes' => $this->andpcCodes, 'fifplCodes' => $this->fifplCodes, 'personalPrices' => $this->personalPrices] as $path => $rows) {
+            foreach ($rows as $row) {
+                // Codes entered before they were tied to an organization have none.
+                if (isset($row['organization']) && !in_array($row['organization'], $ids, true)) {
+                    $context->buildViolation('Un financement concerne un organisme qui ne porte pas cette formation.')->atPath($path)->addViolation();
+
+                    return;
+                }
+            }
+        }
     }
 
     /** @return \Doctrine\Common\Collections\Collection<int, Organization> */
@@ -130,18 +181,25 @@ class Formation extends SoftDeletable
     #[Groups('read')]
     public function getReference(): ?string
     {
-        if ($this->customReference) {
-            return $this->customReference;
-        }
+        return $this->reference;
+    }
+
+    /**
+     * Generated on every save: audience acronym, then formation acronym (or title slug).
+     * Without an audience or a name the previous value is kept.
+     */
+    public function refreshReference(): void
+    {
         $slugger = new AsciiSlugger('fr');
         $prefix = $slugger->slug($this->targetAudience->acronym ?? '')->upper()->toString();
         // Audiences created before the acronym existed (or free text) fall back to their initial.
         if ('' === $prefix && preg_match('/\p{L}/u', $this->targetAudience->name ?? $this->audience ?? '', $initial)) {
             $prefix = mb_strtoupper($initial[0]);
         }
-        $slug = $slugger->slug($this->title)->lower()->toString();
-
-        return '' === $prefix || '' === $slug ? $this->reference : $prefix.'-'.$slug;
+        $own = $slugger->slug($this->acronym ?? '')->upper()->toString() ?: $slugger->slug($this->title)->lower()->toString();
+        if ('' !== $prefix && '' !== $own) {
+            $this->reference = mb_substr($prefix.'-'.$own, 0, 300);
+        }
     }
 
     #[Groups('read')]

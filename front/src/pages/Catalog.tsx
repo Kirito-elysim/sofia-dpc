@@ -12,7 +12,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import './organizations.css'
 import './catalog.css'
 import {publicationLabel, publicationOptions} from './formationPublication'
-import {Archive, BookOpen, FileCheck2, FilePenLine} from 'lucide-react'
+import {Archive, BookOpen, EyeOff, FileCheck2, FilePenLine} from 'lucide-react'
 
 type Row = Parameters<typeof fromRow>[1] & {id:number}
 type Account = {userId:number;superAdmin:boolean;trainerId:number;staff:boolean;active:boolean}
@@ -20,7 +20,7 @@ type Org = {id:number;name:string;code?:string;color?:string|null}
 const topics:Record<string,PictoName>={'Métabolisme':'heart','Cardiologie':'activity','Infectiologie':'pill'}
 const fundingOptions = ['ANDPC', 'FIFPL', 'Personnel']
 type AndpcCode = {year:number;code:string}
-function codes(row:Row):AndpcCode[]{return row.andpcCodes ?? []}
+function codes(row:Row):AndpcCode[]{return ((row.andpcCodes ?? []) as Partial<AndpcCode>[]).filter((c):c is AndpcCode=>!!c.code)}
 function Dialog({drawer,title,close,children,trainer}:{drawer?:boolean,title:string,close:()=>void,children:ReactNode,trainer:boolean}){
   const ref=useRef<HTMLDialogElement>(null)
   useEffect(()=>{const d=ref.current!;d.showModal();return ()=>d.close()},[])
@@ -75,7 +75,7 @@ export default function Catalog({path,title,canWrite}:{path:string,title:string,
   const actions=(r:Row)=>{
     const account=accounts.data?.find(x=>x.trainerId===r.id),ok=!!account&&!account.superAdmin&&account.active&&(account.staff||!!r.active)
     return <RowActions>
-      <EditAction aria-label={'Modifier '+name(r)} onClick={()=>open(r)}/>
+      <EditAction label={!trainer&&r.publicationStatus==='draft'?'Reprendre':'Modifier'} aria-label={(!trainer&&r.publicationStatus==='draft'?'Reprendre ':'Modifier ')+name(r)} onClick={()=>open(r)}/>
       <ToggleAction active={!!r.active} disabled={mutation.isPending} onClick={()=>toggle(r)}/>
       <DeleteAction disabled={!trainer&&sessions.has(r.id)} title={!trainer&&sessions.has(r.id)?'Suppression impossible : cette formation possède déjà une session.':undefined} aria-label={'Supprimer '+name(r)} onClick={()=>{mutation.reset();remove(r)}}/>
       {superAdmin&&<IconAction icon={LogIn} disabled={!ok||borrow.isPending} onClick={()=>borrow.mutate(account!.userId)} aria-label={'Se connecter en tant que '+name(r)} title={ok?'Se connecter en tant que':account?.superAdmin?'Impossible pour un super admin':'Aucun accès actif'}/>}
@@ -88,7 +88,8 @@ export default function Catalog({path,title,canWrite}:{path:string,title:string,
       {[
         {value:'',label:'Formations',Icon:BookOpen,count:rows.length},
         {value:'published',label:'Publiées',Icon:FileCheck2,count:rows.filter(r=>r.publicationStatus==='published').length},
-        {value:'draft',label:'Brouillons / à publier',Icon:FilePenLine,count:rows.filter(r=>r.publicationStatus==='draft').length},
+        {value:'draft',label:'Brouillons',Icon:FilePenLine,count:rows.filter(r=>r.publicationStatus==='draft').length},
+        {value:'unpublished',label:'Non publiées',Icon:EyeOff,count:rows.filter(r=>r.publicationStatus==='unpublished').length},
         {value:'archived',label:'Archivées',Icon:Archive,count:rows.filter(r=>r.publicationStatus==='archived').length},
        ].map(({value,label,Icon,count})=>(
         <button key={label} type="button"

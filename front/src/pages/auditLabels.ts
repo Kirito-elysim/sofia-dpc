@@ -20,9 +20,9 @@ export const fields:Record<string,string>={
   name:'Libellé / nom',acronym:'Acronyme',title:'Titre',label:'Libellé',email:'E-mail',firstName:'Prénom',lastName:'Nom',phone:'Téléphone',
   organization:'Organisme',organizations:'Organismes',additionalOrganizations:'Organismes associés',targetAudience:'Public cible',trainer:'Formateur',
   description:'Description',objectives:'Objectifs pédagogiques',orientation:'Orientation',modality:'Type de programme',publicationStatus:'Statut de publication',
-  active:'Actif',archived:'Archivé',deletedAt:'Supprimé le',fundingTypes:'Financements',andpcCodes:'Codes ANDPC',thumbnail:'Visuel',
+  active:'Actif',archived:'Archivé',deletedAt:'Supprimé le',fundingTypes:'Financements',andpcCodes:'Codes ANDPC',fifplCodes:'Codes FIFPL',personalPrices:'Prix personnels',thumbnail:'Visuel',
   totalDurationMin:'Durée (min)',defaultCapacity:'Capacité',customReference:'Référence personnalisée',reference:'Référence',startTime:'Début',endTime:'Fin',
-  status:'Statut',date:'Date',capacity:'Capacité',code:'Code',roles:'Rôles',
+  price:'Prix (€)',status:'Statut',date:'Date',capacity:'Capacité',code:'Code',roles:'Rôles',
 }
 export function readable(value:unknown):string{
   if(value===null||value===undefined||value==='')return '—'

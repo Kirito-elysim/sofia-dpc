@@ -1,14 +1,15 @@
-import {expect,test,vi} from 'vitest'
-import {render,fireEvent,screen,waitFor} from '@testing-library/react'
+import {afterEach,expect,test,vi} from 'vitest'
+import {cleanup,render,fireEvent,screen,waitFor} from '@testing-library/react'
 import {MemoryRouter,Route,Routes} from 'react-router-dom'
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query'
 import FormationSheet from './FormationSheet'
 import {api} from '../api'
 vi.mock('../api',()=>({api:vi.fn()}))
+afterEach(cleanup)
 
 test('conserve la saisie pendant la consultation des sessions et enregistre le champ modifié',async()=>{
   const org={id:4,name:'SOFIA',active:true}
-  const record={id:8,title:'Formation initiale',organization:org,publicationStatus:'draft',active:true,defaultCapacity:20,fundingTypes:[],andpcCodes:[]}
+  const record={id:8,title:'Formation initiale',organization:org,publicationStatus:'archived',active:true,defaultCapacity:20,fundingTypes:[],andpcCodes:[]}
   vi.mocked(api).mockImplementation(async(path,init)=>{
     if(path==='/target-audiences')return []
     if(path==='/organizations')return [org]
@@ -23,4 +24,24 @@ test('conserve la saisie pendant la consultation des sessions et enregistre le c
   fireEvent.click(screen.getByRole('button',{name:'Diffusion'}))
   fireEvent.click(screen.getByRole('button',{name:'Enregistrer'}))
   await waitFor(()=>expect(api).toHaveBeenCalledWith('/formations/8',expect.objectContaining({method:'PATCH',body:JSON.stringify({title:'Formation révisée'})})))
+})
+
+test('renvoie un brouillon vers les étapes de création',async()=>{
+  vi.mocked(api).mockImplementation(async()=>({id:8,title:'Brouillon',publicationStatus:'draft'}))
+  render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/settings/formations/8/edit']}><Routes>
+    <Route path="/settings/formations/:id/edit" element={<FormationSheet canReadClasses canSchedule/>}/>
+    <Route path="/settings/formations/:id/resume" element={<p>Étapes de création</p>}/></Routes></MemoryRouter></QueryClientProvider>)
+  expect(await screen.findByText('Étapes de création')).toBeTruthy()
+})
+
+test('modifie les lignes de financement d’une formation publiée',async()=>{
+  const org={id:4,name:'SOFIA',active:true}
+  const record={id:8,title:'Publiée',organization:org,publicationStatus:'published',active:true,defaultCapacity:20,fundingTypes:['FIFPL'],andpcCodes:[],fifplCodes:[{organization:4,year:2026,code:'F-1'}]}
+  vi.mocked(api).mockClear()
+  vi.mocked(api).mockImplementation(async(path,init)=>path==='/organizations'?[org]:path==='/target-audiences'?[]:{...record,...JSON.parse(String(init?.body??'{}'))})
+  const view=render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/settings/formations/8/edit']}><Routes><Route path="/settings/formations/:id/edit" element={<FormationSheet canReadClasses={false} canSchedule={false}/>}/></Routes></MemoryRouter></QueryClientProvider>)
+  fireEvent.click(await view.findByRole('button',{name:'Diffusion'}))
+  fireEvent.change(view.getByLabelText('Prix HT (€)'),{target:{value:'300'}})
+  fireEvent.click(view.getByRole('button',{name:'Enregistrer'}))
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/formations/8',expect.objectContaining({method:'PATCH',body:JSON.stringify({fifplCodes:[{organization:4,year:2026,code:'F-1',priceHT:'300'}]})})))
 })

@@ -767,16 +767,34 @@ class ReferentialsTest extends WebTestCase
             'organization' => "/api/organizations/$org",
             'additionalOrganizations' => ["/api/organizations/$other"],
             'targetAudience' => "/api/target-audiences/$audience",
-            'customReference' => 'pilote-01',
+            'acronym' => 'pilote 01',
+            'reference' => 'saisie-ignoree',
         ]);
         $this->assertResponseStatusCodeSame(201);
         $this->assertSame($other, $formation['additionalOrganizations'][0]['id']);
-        $this->assertSame('pilote-01', $formation['reference']);
+        $this->assertSame('MED-PILOTE-01', $formation['reference']);
         $this->call('PATCH', "/api/target-audiences/$audience", ['name' => 'Médecins généralistes']);
         $this->assertResponseIsSuccessful();
         $this->assertSame('Médecins généralistes', $this->call('GET', '/api/formations/'.$formation['id'])['audience']);
         $url = '/api/formations/'.$formation['id'];
-        $this->call('PATCH', $url, ['customReference' => null]);
+        $hidden = $this->call('PATCH', $url, ['publicationStatus' => 'unpublished', 'active' => false]);
+        $this->assertSame(['unpublished', false], [$hidden['publicationStatus'], $hidden['active']]);
+        $this->call('PATCH', $url, ['andpcCodes' => [['organization' => 999999, 'year' => 2026, 'code' => 'X']]]);
+        $this->assertResponseStatusCodeSame(422);
+        $codes = [['organization' => $org, 'year' => 2026, 'code' => 'A-1'], ['organization' => $other, 'year' => 2026, 'code' => 'B-2']];
+        $this->assertEquals($codes, $this->call('PATCH', $url, ['andpcCodes' => $codes])['andpcCodes']);
+        $fifpl = [['organization' => $other, 'year' => 2026, 'code' => 'F-1', 'durationHours' => '7.5', 'priceHT' => '300']];
+        $personal = [['organization' => $org, 'year' => 2026, 'priceHT' => '300', 'priceTTC' => '360']];
+        $saved = $this->call('PATCH', $url, ['fifplCodes' => $fifpl, 'personalPrices' => $personal]);
+        $this->assertEquals([$fifpl, $personal], [$saved['fifplCodes'], $saved['personalPrices']]);
+        $this->call('PATCH', $url, ['fifplCodes' => [['organization' => 999999, 'year' => 2026, 'code' => 'X']]]);
+        $this->assertResponseStatusCodeSame(422);
+        $this->call('PATCH', $url, ['personalPrices' => [['year' => 2026, 'priceHT' => '-1']]]);
+        $this->assertResponseStatusCodeSame(422);
+        $this->call('PATCH', $url, ['price' => '-5']);
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertSame('450.50', $this->call('PATCH', $url, ['price' => '450.50'])['price']);
+        $this->call('PATCH', $url, ['acronym' => null]);
         $this->assertSame('MED-formation-pilote', $this->call('GET', $url)['reference']);
         $this->call('DELETE', "/api/target-audiences/$audience");
         $this->assertResponseStatusCodeSame(409);
