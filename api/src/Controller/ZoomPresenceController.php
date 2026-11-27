@@ -110,7 +110,7 @@ final class ZoomPresenceController extends AbstractController
             CASE WHEN a.person_role='TRAINER' THEN concat_ws(' ',f.first_name,f.last_name)
                  WHEN a.person_role='LEARNER' THEN concat_ws(' ',p.first_name,p.last_name) END AS name
             FROM attendance_event a JOIN class_slot s ON s.id=a.slot_id JOIN virtual_class c ON c.id=s.virtual_class_id
-            JOIN training t ON t.id=c.training_id JOIN time_slot ts ON ts.id=s.time_slot_id LEFT JOIN trainer f ON f.id=s.trainer_id
+            JOIN formation t ON t.id=c.formation_id JOIN time_slot ts ON ts.id=s.time_slot_id LEFT JOIN trainer f ON f.id=s.trainer_id
             LEFT JOIN enrollment e ON e.id=a.enrollment_id LEFT JOIN participant p ON p.id=e.participant_id
             WHERE {$scope->sql('t.organization_id')} ORDER BY a.at DESC,a.id DESC LIMIT 100");
         return $this->json($rows);

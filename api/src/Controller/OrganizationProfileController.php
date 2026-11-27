@@ -90,7 +90,8 @@ final class OrganizationProfileController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN')]
     public function discardDraft(int $id, Connection $db): Response
     {
-        if (!self::closeDraft($db, $id, $this->ownerId())) {
+        if (!$db->executeStatement('UPDATE organization_draft SET closed_at=CURRENT_TIMESTAMP, deleted_at=CURRENT_TIMESTAMP
+            WHERE id=? AND owner_id=? AND closed_at IS NULL', [$id, $this->ownerId()])) {
             throw $this->createNotFoundException();
         }
 

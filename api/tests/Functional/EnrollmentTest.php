@@ -6,7 +6,7 @@ use App\Entity\ClassSlot;
 use App\Entity\TimeSlot;
 use App\Entity\Trainer;
 use App\Entity\Organization;
-use App\Entity\Training;
+use App\Entity\Formation;
 use App\Entity\User;
 use App\Entity\VirtualClass;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,15 +24,15 @@ class EnrollmentTest extends WebTestCase
         $this->client = static::createClient();
         $this->client->disableReboot(); // keeps the in-memory Messenger transport between requests
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        $this->em->getConnection()->executeStatement('TRUNCATE enrollment, trainer, time_slot, message_log, audit_log, participant, virtual_class, training, organization, "user" RESTART IDENTITY CASCADE');
+        $this->em->getConnection()->executeStatement('TRUNCATE enrollment, trainer, time_slot, message_log, audit_log, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
     }
 
     private function makeClass(int $capacity): VirtualClass
     {
         $org = new Organization('SOFIA', 'SOFIA', 'sofia@example.test');
-        $class = new VirtualClass(new Training($org, 'Formation fictive'), new \DateTimeImmutable('+7 days'), $capacity);
+        $class = new VirtualClass(new Formation($org, 'Formation fictive'), new \DateTimeImmutable('+7 days'), $capacity);
         $this->em->persist($org);
-        $this->em->persist($class->training);
+        $this->em->persist($class->formation);
         $this->em->persist($class);
         $this->em->flush();
 
@@ -79,7 +79,7 @@ class EnrollmentTest extends WebTestCase
     public function testTrainerAndLearnerAreDistinctWithinAClass(): void
     {
         $class = $this->makeClass(1);
-        $other = new VirtualClass($class->training, new \DateTimeImmutable('+8 days'), 1);
+        $other = new VirtualClass($class->formation, new \DateTimeImmutable('+8 days'), 1);
         $trainer = new Trainer('Ana', 'Test', 'ANA@example.test');
         $time = new TimeSlot('Matin', '09:00', '13:00');
         foreach ([$other, $trainer, $time, new ClassSlot($class, $time, $trainer)] as $entity) {
@@ -137,8 +137,15 @@ class EnrollmentTest extends WebTestCase
         $id = $this->enroll($c, 'a@example.test')['id'];
         $this->client->request('DELETE', "/api/enrollments/$id");
         $this->assertResponseStatusCodeSame(204);
-        $this->enroll($c, 'b@example.test');
+        $deletedAt = fn () => $this->em->getConnection()->fetchOne('SELECT deleted_at FROM enrollment WHERE id = ?', [$id]);
+        $this->assertNotNull($deletedAt());
+        $other = $this->enroll($c, 'b@example.test')['id'];
         $this->assertResponseStatusCodeSame(201);
+
+        // Coming back clears the deletion date.
+        $this->client->request('DELETE', "/api/enrollments/$other");
+        $this->assertSame($id, $this->enroll($c, 'a@example.test')['id']);
+        $this->assertNull($deletedAt());
     }
 
     public function testRolesAndValidation(): void

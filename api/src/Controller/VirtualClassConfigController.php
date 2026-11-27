@@ -17,7 +17,7 @@ final class VirtualClassConfigController extends AbstractController
     public function list(Connection $db, OrganizationScope $scope): JsonResponse
     {
         $items=$db->fetchAllAssociative('SELECT * FROM virtual_class_config ORDER BY id');
-        $organizations=$db->fetchAllAssociative('SELECT id,name,virtual_class_config_id AS config FROM organization WHERE deleted_at IS NULL AND '.$scope->sql('id').' ORDER BY name');
+        $organizations=$db->fetchAllAssociative('SELECT id,name,code,color,virtual_class_config_id AS config FROM organization WHERE deleted_at IS NULL AND '.$scope->sql('id').' ORDER BY name');
         if ($scope->ids() !== null) {
             $items = array_values(array_filter($items, static fn ($item) => in_array($item['id'], array_column($organizations, 'config'))));
             $hostIds = $db->fetchFirstColumn('SELECT DISTINCT h.value::int FROM organization o
@@ -81,7 +81,8 @@ final class VirtualClassConfigController extends AbstractController
                 $values=[$name,json_encode($policy,JSON_THROW_ON_ERROR),json_encode($hosts,JSON_THROW_ON_ERROR),$archived?'true':'false'];
                 if ($id===null) {
                     $id=(int)$db->fetchOne('INSERT INTO virtual_class_config(name,policy,hosts,archived) VALUES (?,?,?,?) RETURNING id',$values);
-                } elseif (!$db->executeStatement('UPDATE virtual_class_config SET name=?,policy=?,hosts=?,archived=? WHERE id=?',[...$values,$id])) {
+                } elseif (!$db->executeStatement('UPDATE virtual_class_config SET name=?,policy=?,hosts=?,archived=?,
+                    deleted_at=CASE WHEN ? THEN COALESCE(deleted_at,CURRENT_TIMESTAMP) END WHERE id=?',[...$values,$values[3],$id])) {
                     throw new \InvalidArgumentException('Configuration introuvable.');
                 }
                 $db->executeStatement('UPDATE organization SET virtual_class_config_id=NULL WHERE virtual_class_config_id=?',[$id]);

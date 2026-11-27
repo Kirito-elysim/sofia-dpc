@@ -45,3 +45,39 @@
 .catalog .oa-actions.directory-row-actions{grid-template-columns:max-content 104px max-content max-content}
 .catalog .cat-empty-row .od-empty{border:0;background:none}
 .catalog .od-empty button{margin-top:4px;padding:7px 12px;border:1px solid #b9cae6;border-radius:7px;background:white;color:#184d94;font-weight:650}
+
+.formation-list .ls-check {display:none}
+.formation-list .ls-select > span {position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+.formation-list .ls-table {min-width:930px}
+.formation-list .ls-table td {padding:9px 6px;text-align:center}
+.formation-list .ls-table th {background:#e2ebff;text-align:center}
+.formation-list .ls-table td:nth-child(2) {width:23%;text-align:left;white-space:normal}
+.formation-name,.formation-sessions,.formation-audience {display:inline-flex;align-items:center;gap:8px}
+.formation-name small {display:block;margin-top:2px}
+.formation-name > svg.picto {width:39px;height:39px;padding:8px;border-radius:10px;background:#e9efff;color:#175cf0;flex:none}
+.formation-funds {display:grid;gap:3px;justify-content:center}
+.formation-funds span,.formation-audience {padding:3px 10px;border-radius:18px;background:#e4ebff;font-size:.93em}
+.formation-funds [data-fund=FIFPL] {background:#efe4ff}
+.formation-funds [data-fund=Personnel] {background:#ffe5d4}
+.formation-sessions svg,.formation-audience svg {width:16px;height:16px}
+.formation-list .ls-add {display:inline-flex;align-items:center;gap:8px}
+.formation-list .ls-filters {padding:14px;border:1px solid var(--card-border);border-radius:14px;background:white;box-shadow:var(--card-shadow)}
+.formation-list .ls-header .picto-heading {width:72px;height:72px;padding:16px}
+.formation-list .ls-header h1 {font-size:30px}
+.formation-list .ls-table tbody tr:not(.ls-blank) {height:60px}
+.formation-thumbnail {display:block;width:78px;height:48px;margin:auto;object-fit:contain;background:#f7f9ff;border-radius:6px}
+.formation-name > .formation-thumbnail {width:48px;height:48px;margin:0;flex:none;object-fit:cover}
+.formation-modality {display:inline-block;padding:3px 9px;border-radius:12px;background:#efe8ff;color:#45286a;white-space:nowrap}
+.formation-stats {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:12px}
+.formation-stats > button {text-align:left;color:inherit;display:flex;align-items:center;gap:14px;padding:14px 18px;background:white;border:1px solid var(--card-border);border-radius:12px;box-shadow:var(--card-shadow)}
+.formation-stats svg {width:38px;height:38px;padding:9px;border-radius:10px;background:#e8efff;color:#275bc8}
+.formation-stats strong,.formation-stats span {display:block}
+.formation-stats strong {font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums}
+.formation-status {display:grid;gap:3px;justify-items:center}
+.formation-status [data-publication] {padding:3px 8px;border-radius:12px;background:#eef0f4;color:#455269}
+.formation-status [data-publication=draft] {background:#fff0cd;color:#734806}
+.formation-status [data-publication=published] {background:#def5e4;color:#175933}
+.formation-stats > button:hover {border-color:#88aafa}
+.formation-stats > button[aria-pressed=true] {border-color:#1557f5;background:#f1f6ff}
+.formation-stats > button:focus-visible {outline:3px solid #1557f5;outline-offset:2px}
+.formation-name small {overflow-wrap:anywhere}

@@ -1,4 +1,4 @@
-.roles-work{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);align-items:start;gap:16px}
+.roles-work{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(300px,1fr);align-items:start;gap:16px}
 .roles-left{display:flex;flex-direction:column;gap:14px;min-width:0}
 .roles-work h2,.roles-work h3{margin:0}.roles-work h2{font-size:18px}.roles-work h3{font-size:14px}
 .roles-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.roles-stats strong{display:block;font-size:22px}
@@ -16,3 +16,5 @@
 .roles-editor input[role=switch]:checked{background:#005dff}.roles-editor input[role=switch]:checked:before{transform:translateX(14px)}
 .roles-editor footer{justify-content:flex-end;border-top:1px solid #e0e8f5;padding-top:12px}
 @media(max-width:1100px){.roles-work{grid-template-columns:1fr}}
+.roles-editor [role=status]{display:flex;align-items:center;gap:6px;margin:0;color:#087d33;font-weight:600}
+.roles-left .ls-clip{max-width:140px}

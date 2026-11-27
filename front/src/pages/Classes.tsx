@@ -15,8 +15,8 @@ export default function Classes() {
           <li key={c.id}>
             <Link to={`/classes/${c.id}`} className="sofia-card flex items-center gap-4 px-4 py-3 hover:shadow">
               <span className="w-24 text-sm text-slate-500">{new Date(c.date).toLocaleDateString('fr-FR')}</span>
-              <span className="flex-1 font-medium">{c.training.title}</span>
-              <OrganizationBadge {...c.training.organization} />
+              <span className="flex-1 font-medium">{c.formation.title}</span>
+              <OrganizationBadge {...c.formation.organization} />
               <span className="w-16 text-right text-sm">{c.enrolledCount} / {c.capacity}</span>
               <StatusBadge status={c.status} />
             </Link>

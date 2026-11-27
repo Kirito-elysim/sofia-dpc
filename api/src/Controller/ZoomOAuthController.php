@@ -132,11 +132,7 @@ final class ZoomOAuthController extends AbstractController
         }
         try {
             $db->transactional(function(Connection $db) use ($id,$organization,$users): void {
-                $db->executeQuery("SELECT pg_advisory_xact_lock(hashtext('virtual-class-config'))");
-                $org=$db->fetchAssociative('SELECT name,virtual_class_config_id FROM organization WHERE id=? AND active AND deleted_at IS NULL FOR UPDATE',[$organization]);
-                if (!$org) {
-                    throw new \DomainException('Organisme actif introuvable.');
-                }
+                $org=$this->lockOrganization($db,$organization);
                 $ids=[];
                 foreach ($users as $host=>$label) {
                     $hostId=$db->fetchOne('INSERT INTO zoom_account(label,host_user_id,profile,active,oauth_connection_id)
@@ -148,21 +144,69 @@ final class ZoomOAuthController extends AbstractController
                     }
                     $ids[]=(int)$hostId;
                 }
-                $config=$org['virtual_class_config_id'];
-                $current=$config ? $db->fetchAssociative('SELECT * FROM virtual_class_config WHERE id=?',[$config]) : null;
-                $old=$current ? json_decode($current['hosts'],true,512,JSON_THROW_ON_ERROR) : [];
-                $pool=json_encode(array_values(array_unique([...$old,...$ids])),JSON_THROW_ON_ERROR);
-                if ($current && (int)$db->fetchOne('SELECT count(*) FROM organization WHERE virtual_class_config_id=?',[$config])===1) {
-                    $db->update('virtual_class_config',['hosts'=>$pool],['id'=>$config]);
-                } else {
-                    $config=$db->fetchOne('INSERT INTO virtual_class_config(name,policy,hosts) VALUES (?,?,?) RETURNING id',
-                        [mb_substr('Zoom · '.$org['name'],0,100),$current['policy']??json_encode(ClassPolicy::DEFAULT,JSON_THROW_ON_ERROR),$pool]);
-                    $db->update('organization',['virtual_class_config_id'=>$config],['id'=>$organization]);
-                }
+                $this->attachHosts($db,$organization,$org,$ids);
             });
         } catch (\DomainException $error) {
             return $this->json(['detail'=>$error->getMessage()],409);
         }
         return $this->json(['imported'=>count($users)]);
+    }
+
+    #[Route('/server-account', methods:['POST'])]
+    public function createServerAccount(Request $request, Connection $db, ZoomOAuth $oauth): JsonResponse
+    {
+        $input=$request->toArray();
+        foreach (['label'=>100,'hostUserId'=>180,'accountId'=>255,'clientId'=>255,'clientSecret'=>1024] as $field=>$limit) {
+            if (!is_string($input[$field]??null) || trim($input[$field])==='' || mb_strlen($input[$field])>$limit) {
+                return $this->json(['detail'=>'Renseignez le nom, l’identifiant hôte et les trois identifiants OAuth Zoom.'],422);
+            }
+        }
+        $organization=$input['organization']??null;
+        if (!is_int($organization) || $organization<1 || !is_bool($input['active']??null)) {
+            return $this->json(['detail'=>'Sélectionnez un organisme et le statut du compte.'],422);
+        }
+        $sealed=$oauth->seal(json_encode(['client_id'=>trim($input['clientId']),'client_secret'=>$input['clientSecret'],
+            'account_id'=>trim($input['accountId'])],JSON_THROW_ON_ERROR));
+        try {
+            $id=$db->transactional(function(Connection $db) use ($input,$organization,$sealed): int {
+                $org=$this->lockOrganization($db,$organization);
+                $id=$db->fetchOne('INSERT INTO zoom_account(label,host_user_id,profile,active,sealed_credentials)
+                    VALUES (?,?,?,?,?) ON CONFLICT(host_user_id) DO NOTHING RETURNING id',
+                    [trim($input['label']),trim($input['hostUserId']),'S2S_'.strtoupper(bin2hex(random_bytes(8))),$input['active']?'true':'false',$sealed]);
+                if (!$id) {
+                    throw new \DomainException('Cet identifiant hôte Zoom existe déjà.');
+                }
+                $this->attachHosts($db,$organization,$org,[(int)$id]);
+                return (int)$id;
+            });
+        } catch (\DomainException $error) {
+            return $this->json(['detail'=>$error->getMessage()],409);
+        }
+        return $this->json(['id'=>$id],201);
+    }
+
+    private function lockOrganization(Connection $db,int $organization): array
+    {
+        $db->executeQuery("SELECT pg_advisory_xact_lock(hashtext('virtual-class-config'))");
+        $org=$db->fetchAssociative('SELECT name,virtual_class_config_id FROM organization WHERE id=? AND active AND deleted_at IS NULL FOR UPDATE',[$organization]);
+        if (!$org) {
+            throw new \DomainException('Organisme actif introuvable.');
+        }
+        return $org;
+    }
+
+    private function attachHosts(Connection $db,int $organization,array $org,array $ids): void
+    {
+        $config=$org['virtual_class_config_id'];
+        $current=$config ? $db->fetchAssociative('SELECT * FROM virtual_class_config WHERE id=?',[$config]) : null;
+        $old=$current ? json_decode($current['hosts'],true,512,JSON_THROW_ON_ERROR) : [];
+        $pool=json_encode(array_values(array_unique([...$old,...$ids])),JSON_THROW_ON_ERROR);
+        if ($current && (int)$db->fetchOne('SELECT count(*) FROM organization WHERE virtual_class_config_id=?',[$config])===1) {
+            $db->update('virtual_class_config',['hosts'=>$pool],['id'=>$config]);
+        } else {
+            $config=$db->fetchOne('INSERT INTO virtual_class_config(name,policy,hosts) VALUES (?,?,?) RETURNING id',
+                [mb_substr('Zoom · '.$org['name'],0,100),$current['policy']??json_encode(ClassPolicy::DEFAULT,JSON_THROW_ON_ERROR),$pool]);
+            $db->update('organization',['virtual_class_config_id'=>$config],['id'=>$organization]);
+        }
     }
 }

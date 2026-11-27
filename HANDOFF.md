@@ -614,3 +614,130 @@ Vérifications : PHPUnit 23 tests, 267 assertions ; lint (un avertissement), 2 t
 - Elle réagit immédiatement et demande d’enregistrer tant que le statut affiché diffère du statut enregistré ; les boutons d’accès sont masqués dans cet intervalle.
 - Vérifications : lint (un avertissement), 2 tests, build ; bascule contrôlée au navigateur sans enregistrer. Non commité.
 - Commité, fusionné dans `main` et poussé sur `origin` à la demande de l’utilisateur (composants de liste compris). Les mentions « non commité » sont closes. Déploiement non vérifié.
+
+### Bouton Supprimer des utilisateurs — 25 novembre 2026
+
+- Question de l’utilisateur : pourquoi est-il grisé. Choix d’origine : les comptes sont conservés pour le journal d’audit et désactivés ; l’API ne propose pas de suppression.
+- Décision en attente : garder, retirer le bouton, ou développer une suppression logique. Aucun code modifié.
+
+### Suppression logique partout — 25 novembre 2026
+
+Demandes de l’utilisateur :
+- Comptes utilisateurs : suppression logique (`DELETE /api/users/{id}`, super admin, jamais son propre compte), bouton activé avec confirmation. Le compte quitte la liste, ne peut plus se connecter, libère sa fiche formateur ; son e-mail reste réservé.
+- **Règle du projet (ajoutée à `CLAUDE.md`) : toute entité étend `SoftDeletable` et porte `deleted_at`.** Exception retenue par l’IA, à confirmer : `AuditLog`, en ajout seul. `SoftDeleteConventionTest` fait échouer les tests pour une entité qui l’oublie.
+
+Livré : `Version20261125080000` (utilisateurs) et `Version20261125090000` (autres entités, `virtual_class_config`, `organization_draft`), appliquées en local. La date est renseignée à la suppression d’un compte, l’annulation d’une inscription (effacée si elle est réactivée), l’archivage d’une configuration (effacée au désarchivage) et l’abandon d’un brouillon. Organismes, formations, formateurs, créneaux et documents l’avaient déjà. `ConfirmDialog` partagé ajouté aux composants de liste.
+
+Limites : les inscriptions annulées et configurations archivées avant ce changement n’ont pas de date (elle figure au journal d’audit) ; les liens entre entités (rattachements aux organismes) sont toujours retirés physiquement ; les autres entités n’ont pas encore d’action de suppression ; l’annulation d’une inscription apparaît « DELETE » au journal.
+
+Vérifications : PHPUnit 27 tests ; lint (un avertissement), 2 tests, build ; suppression d’un compte fictif au navigateur. Le serveur de développement du front a été redémarré (ancienne feuille de style servie). Non commité.
+- Validé par l’utilisateur : le journal d’audit reste sans `deleted_at` (exception confirmée).
+
+### Tableau Organismes enrichi — 25 novembre 2026
+
+- Demande de l’utilisateur : améliorer la liste des organismes ; choix retenu : enrichir le tableau (cartes inchangées, vue par défaut inchangée).
+- Colonnes : logo cerclé à la couleur de l’organisme et nom, code en pastille de couleur, e-mail, ville, statut, classes, apprenants, actions. Même règle de logo que les cartes.
+- Vérifications : lint (un avertissement), 2 tests, build ; vue Liste contrôlée en 1440 × 900 sans défilement horizontal. Non commité.
+
+### Rôles : nombre de personnes et suppression — 25 novembre 2026
+
+- Demande de l’utilisateur : voir combien de personnes ont chaque rôle et supprimer un rôle, avec un message s’il est attribué.
+- Colonne « Personnes » (comptes non supprimés, désactivés compris ; rôles système et personnalisés). `DELETE /api/custom-roles/{id}` : suppression logique, super admin, refus 409 si le rôle est attribué ; fenêtre « Suppression impossible » avec le nombre. Les rôles système restent protégés. Un rôle supprimé n’est plus attribuable et son nom reste réservé.
+- Vérifications : PHPUnit 28 tests, 313 assertions ; lint (un avertissement), 2 tests, build ; recette navigateur : suppression d’un rôle fictif, refus sur un rôle attribué, tableau en 1440 × 900. Non commité.
+
+### Filtre « Supprimé » — 25 novembre 2026
+
+- Demande de l’utilisateur : afficher les éléments supprimés depuis les filtres.
+- Choix « Supprimé » sur Organismes, Utilisateurs, Rôles, Formateurs, Formations et Créneaux (`components/list/useDeleted.ts`). Consultation seule, avec la date de suppression ; aucune action ni restauration. Organismes s’affiche alors en tableau ; Créneaux en liste.
+- Choix de l’IA, à confirmer : réservé au super admin (API `?deleted=1`, 403 sinon). « Tous les statuts » n’inclut pas les supprimés.
+- Vérifications : PHPUnit 29 tests, 335 assertions ; lint (un avertissement), 2 tests, build ; six écrans contrôlés au navigateur. Non commité.
+- Validé par l’utilisateur : le filtre « Supprimé » est ouvert aux admins aussi (dans leur périmètre d’organismes) ; refusé aux autres rôles. Utilisateurs et Rôles restent des écrans super admin.
+
+- 2026-11-26 : demande d’une maquette (via ChatGPT) réunissant Comptes Zoom et Configurations des classes virtuelles sur un même écran. Prompt fourni dans la conversation ; aucun code modifié. Point à valider sur la maquette : les comptes Zoom restent réservés au super administrateur, les configurations suivent leurs permissions actuelles.
+
+- 2026-11-26 : demande d’une maquette (via ChatGPT) pour la création d’une formation, inspirée du projet voisin `platform`. Prompt fourni dans la conversation ; aucun code modifié. Repris dans le prompt mais absents de Sofia, à valider : description, objectifs, codes ANDPC (année + code). Écartés : e-learning, EPP, questionnaires, prix, chapitres, FIFPL/CPF/personnel, quiz Zoom.
+
+- Validé par l’utilisateur (2026-11-26) : la fiche formation gardera la description, les objectifs pédagogiques et les codes ANDPC (année + code, organisme repris de la formation). Non développé : attente de la maquette.
+
+- 2026-11-26 : prompt de maquette fourni pour l’écran liste « Formations » (aucun code modifié).
+
+- Demandé par l’utilisateur (2026-11-26) : sur une formation, pouvoir choisir le type de financement. Proposé dans les prompts de maquette, à valider : choix multiple parmi ANDPC, FIFPL, CPF, Personnel (repris de `platform`) ; carte des codes ANDPC affichée seulement si ANDPC est coché ; colonne et filtre « Financement » dans la liste. Aucun code modifié.
+
+- Validé par l’utilisateur (2026-11-26) : pas de CPF. Types de financement d’une formation : ANDPC, FIFPL, Personnel.
+
+- 2026-11-26 : prompt de maquette des formations (liste + création) refait en un seul texte avec les choix validés ; aucun code modifié.
+
+### Relecture de « Paramètres Zoom » (écran refait avec ChatGPT) — 26 novembre 2026
+
+- Avis demandé par l’utilisateur ; aucun code modifié par cette relecture. `/settings/zoom` : vue d’ensemble + 4 étapes ; anciennes adresses redirigées. Non commité.
+- Vérifications : lint (0 erreur, 2 avertissements dont un nouveau dans `VirtualClassConfigs.tsx`), 2 tests, build ; cinq vues et le formulaire de configuration contrôlés en 1440 × 900, données vides, sans enregistrement. PHPUnit non relancé (pas de changement backend pour cet écran).
+- Points à corriger (non traités) : couleur des organismes selon la position (`.zw-tag:nth-child(even)`) au lieu de leur couleur ; composants de liste partagés non réutilisés ; étape 4 redondante et liste déroulante mal placée dans le tableau ; premier paramétrage peu guidé ; changer d’étape ferme un formulaire sans avertir ; erreur d’enregistrement d’un hôte affichée dans la liste et non dans le formulaire.
+
+### Correction de « Paramètres Zoom » — 26 novembre 2026
+
+- Validé par l’utilisateur : « Oui, corrige tout » (les six points de la relecture précédente).
+- Fait : 3 étapes (le rattachement des organismes se fait dans la configuration ; les organismes sans configuration sont signalés ; `?step=organizations` ouvre l’étape 3) ; sans hôte ni configuration, le super admin arrive sur la connexion, blocs empilés et explication du bouton grisé ; hôtes et configurations sur les composants de liste partagés ; badges d’organismes à leur couleur (l’API des configurations renvoie `code` et `color`) ; confirmation avant d’abandonner une saisie via les étapes, la vue d’ensemble ou une autre fiche ; erreurs d’enregistrement dans le formulaire. `ZoomFilters.tsx` remplacé par `ZoomPage.tsx` et `zoomShared.ts`.
+- Vérifications : lint (l’avertissement connu `FormParts.tsx`), 2 tests, build, PHPUnit 29 tests, 338 assertions ; contrôle en 1440 × 900 avec réponses simulées dans le navigateur (aucune écriture Zoom en base). Non commité.
+- Non traité ou non vérifié : quitter par la barre latérale ou le bouton retour du navigateur ne demande pas de confirmation ; panneau ouvert, le tableau des hôtes défile horizontalement ; vue administrateur, petits écrans et connexion Zoom réelle non contrôlés.
+
+### Liste des formations — 27 novembre 2026
+
+Écran intégré dans /settings/trainings avec recherche par titre, référence ou code, filtres organisme, financement et statut, tri, pagination et actions selon les permissions. Le formulaire existant permet de saisir le public et plusieurs financements. Les codes ANDPC (année et code) sont gérés par l’API et affichés dans la liste. Leur saisie dans la future fiche reste à réaliser. Le modèle conserve un organisme par formation. Les suppressions restent consultables via le filtre réservé aux administrateurs.
+
+Migration Version20261127100000 appliquée en développement et de manière ciblée en test. La base de test habituelle présente un historique de migrations incomplet et des colonnes manquantes. Sur la base isolée app_test_catalog27 créée avec les 27 migrations, PHPUnit passe (29 tests, 338 assertions). Frontend : build, deux tests réussis et lint avec trois avertissements Fast Refresh hors catalogue. Comparaison visuelle au navigateur à effectuer.
+
+### Image dans la liste des formations — 27 novembre 2026
+
+Dans la colonne Formation, la vignette apparaît à gauche du titre et de la référence. Le pictogramme de thématique occupe cet emplacement lorsqu’aucune image n’a été téléversée. La création et la modification acceptent JPEG, PNG et WebP jusqu’à 10 Mo. Le navigateur conserve les proportions et transmet une vignette JPEG de 320 pixels maximum avec le formulaire. L’audit trace le changement sans dupliquer le contenu de l’image. Migration Version20261127110000 appliquée en développement et sur app_test_catalog27. Build et deux tests frontend réussis, trois avertissements lint existants. PHPUnit isolé réussi (29 tests, 338 assertions). Téléversement interactif en navigateur à vérifier.
+
+### Modalité des formations — 27 novembre 2026
+
+La liste utilise une vignette carrée de 48 px recadrée à gauche du titre. La colonne triable « Modalité » affiche le choix de la fiche en pastille violette. Le champ facultatif accepte À distance, Classe virtuelle, Mixte ou Présentiel. Les fiches existantes restent sans modalité jusqu’à leur mise à jour. Migration Version20261127120000 appliquée en développement et sur la base isolée app_test_catalog27. Build, 2 tests frontend et 29 tests PHPUnit réussis. Trois avertissements lint existants. Rendu navigateur non contrôlé.
+
+### Statuts et synthèse du catalogue — 27 novembre 2026
+
+Quatre cartes avec pictogrammes SVG précèdent les filtres. Elles comptent les formations accessibles hors suppressions, au total et par statut de publication. Brouillon, Publiée et Archivée sont disponibles dans la fiche et le filtre. Le statut de publication est indépendant de l’activation métier. Les anciennes fiches et les nouvelles démarrent en brouillon. Migration Version20261127130000 appliquée en développement et dans app_test_catalog27. Build, deux tests frontend et 29 tests PHPUnit réussis. Trois avertissements lint préexistants. Rendu navigateur non contrôlé.
+
+### Filtrage par les cartes — 27 novembre 2026
+
+Les trois cartes de publication sélectionnent le statut correspondant en conservant la recherche, l’organisme et le financement. Le total réinitialise tous les filtres. Les boutons sont accessibles au clavier et leur état sélectionné suit le filtre Statut. Build et deux tests frontend réussis, trois avertissements lint préexistants. Interaction non contrôlée en navigateur.
+
+### Référence des formations — 27 novembre 2026
+
+L’API calcule la référence à la lecture avec l’initiale majuscule du public, un tiret et le slug du titre. Le formulaire indique cette règle et la liste utilise le résultat pour l’affichage et la recherche. Une ancienne référence sert de repli si le calcul est impossible. Aucune migration requise. Exemple vérifié dans PHP : Médecins et Éducation thérapeutique du patient donnent M-education-therapeutique-du-patient. PHPUnit isolé (29 tests), tests frontend (2) et build réussis. Trois avertissements lint préexistants.
+
+### Protection des formations utilisées — 27 novembre 2026
+
+La suppression logique d’une formation renvoie 409 dès qu’une classe virtuelle lui est liée, y compris une classe supprimée ou sans inscrit. Toute inscription dépend d’une classe. La planification et la suppression verrouillent la même formation dans leur transaction. Le catalogue désactive le bouton lorsque les sessions visibles indiquent cet usage. Test fonctionnel ajouté pour la suppression autorisée et le refus lié à une session historique. PHPUnit isolé réussi (30 tests, 341 assertions), deux tests frontend et build réussis, trois avertissements lint existants. Pas de migration.
+
+### Création des formations — 27 novembre 2026
+
+Ajouter une formation ouvre /settings/trainings/new. Parcours en cinq étapes avec aperçu du titre, de la catégorie, de la modalité, de la description et du visuel. Un titre et un organisme permettent d’enregistrer un brouillon et de le reprendre via Modifier. L’étape Programme recueille les objectifs, l’étape Évaluations décrit la méthode en texte libre, les financements proposent ANDPC, FIFPL et Personnel avec plusieurs couples année/code pour ANDPC. La validation publie dans le catalogue. Les formations déjà publiées conservent le tiroir d’édition historique. La migration Version20261127140000 ajoute description, objectifs, méthode d’évaluation, prérequis et langue. Appliquée en développement et sur app_test_catalog27. Test UI des cinq étapes et test API de reprise/publication réussis. Totaux : 3 tests frontend, 31 PHPUnit, build réussi, trois avertissements lint existants. Comparaison visuelle en navigateur non effectuée.
+
+### Accès à la création depuis le catalogue — 27 novembre 2026
+
+Le bouton « Créer une formation » utilise l’en-tête partagé, avant les cartes et les filtres. Il ouvre /settings/trainings/new pour les personnes autorisées à modifier les formations. Un test d’interface vérifie sa présence dans l’en-tête et l’ouverture du formulaire. Quatre tests frontend et build réussis, trois avertissements lint préexistants.
+
+### Lecture du cahier des charges MEDELIO — 27 novembre 2026
+
+Synthèse métier du document de revue du 24 août 2026 conservée dans docs/synthese-metier-medelio.md, avec renvois aux pages sources. Pour la fiche formation, distinguer modalité, type de programme et méthode pédagogique. Les besoins groupe et les dispositifs propres aux filiales restent des éléments de cadrage. Aucune évolution applicative engagée par cette lecture.
+
+- 27 novembre 2026 — À la demande de l’utilisateur, le formulaire de création et de reprise de brouillon affiche « Type de programme » pour le champ modality. Changement de libellé uniquement. Les quatre tests frontend et le build passent.
+- 27 novembre 2026 — La colonne « Modalité » de la liste des formations s’intitule désormais « Type de programme », comme dans le formulaire de création. Les quatre tests frontend et le build passent.
+- 27 novembre 2026 — Le formulaire de modification des formations affiche également « Type de programme ». Les quatre tests frontend et le build passent.
+
+- 27 novembre 2026 — Dans la création et la reprise de brouillon, l’étape Programme regroupe orientation (texte facultatif), description et objectifs pédagogiques. La description se saisit et se valide à cette étape. Migration Version20261127150000 appliquée en développement et sur app_test_catalog27. Build, 4 tests frontend et 31 tests PHPUnit réussis (353 assertions).
+
+- 27 novembre 2026 — Création et reprise de brouillon en quatre étapes : Informations, Programme, Financements, Validation. Financements propose ANDPC, FIFPL et Personnel. Le dernier écran récapitule les saisies, permet de modifier chaque rubrique et calcule la progression sur dix éléments, y compris les champs facultatifs. Les anciens contenus d’évaluation restent en base. Test de navigation, correction des financements et publication réussi. Quatre tests frontend et build réussis, trois avertissements lint préexistants. Comparaison visuelle en navigateur non effectuée.
+
+### Fiche de modification — 27 novembre 2026
+
+Modifier ouvre /settings/trainings/:id/edit pour tous les statuts. Conception édite la fiche et son image, Diffusion gère le statut, l’activation et les financements, Pilotage consulte les sessions autorisées et leurs inscriptions actives. Aperçu, impression pour export PDF, duplication en brouillon et archivage disponibles. La saisie est conservée entre onglets. Les scores et taux de complétion sont signalés indisponibles. La fiche ne gère pas les versions publiées ni une visibilité catalogue indépendante. Test UI de modification et de filtrage des sessions ajouté. Cinq tests frontend et build réussis, trois avertissements lint existants. Comparaison visuelle en navigateur non effectuée.
+
+- 27 novembre 2026 — Création simplifiée : catégorie, prérequis, langue et capacité retirés. Capacité saisie sur la classe virtuelle. Public cible sélectionné dans un référentiel avec gestion intégrée. Suppression refusée tant qu’une formation y est liée, y compris dans l’historique. La migration reprend les publics existants. Sélection de plusieurs organismes avec le premier comme porteur pour la planification et le périmètre d’accès. Référence personnalisable, avec génération automatique si vide. Migration Version20261127160000 appliquée en développement et en test isolé. Build, cinq tests frontend et 32 tests PHPUnit réussis.
+
+- 27 novembre 2026 — À la demande de l'utilisateur : création de formation harmonisée sur le bleu de l'application (fin de l'accent rose, partagé avec la fiche de modification) ; les organismes utilisent le champ multi-sélection `OrganizationPicker` (premier sélectionné = porteur) ; les publics cibles ont leur écran `/settings/target-audiences` dans le menu Administration (visible avec `EDIT_TRAININGS`, droits API inchangés), la gestion sous le champ est retirée. Lint (3 avertissements connus), 5 tests et build réussis ; contrôle navigateur 1440 × 900 avec réponses simulées, sans écriture en base. Pas de changement API. Non fait : la fiche de modification garde son sélecteur d'organisme simple ; pas d'unicité sur le nom d'un public. Non commité.
+- 27 novembre 2026 — Publics cibles : champs « Libellé » et « Acronyme » (20 caractères max), obligatoires ; la liste affiche ID, Libellé, Acronyme, et la recherche porte sur les deux textes. Les publics existants ont un acronyme vide (« — ») à compléter. Migration Version20261127170000 appliquée en développement et sur app_test_catalog27 (`TEST_TOKEN=_catalog27`). PHPUnit isolé 32 tests, 5 tests frontend, build réussis, lint 3 avertissements connus. PHPStan signale 41 erreurs hors publics cibles (à traiter). Contrôle navigateur avec réponses simulées. La référence automatique d'une formation utilise toujours l'initiale du libellé, pas l'acronyme. Non commité.
+- 27 novembre 2026 — Validé par l'utilisateur : la référence automatique d'une formation utilise l'acronyme du public cible (slugifié, en majuscules, ex. `MED-formation-pilote`) ; sans acronyme, repli sur l'initiale du libellé. La référence personnalisée reste prioritaire. Calculée à la lecture, donc les formations existantes changent dès que l'acronyme est saisi. PHPUnit isolé (32 tests), 5 tests frontend et build réussis. Non commité.
+- 27 novembre 2026 — Journal d'audit (demande « tout tracer ») : la ressource s'affiche en français avec le nom de l'élément ; un détail par ligne montre avant/après, le contenu supprimé et les données envoyées (méthode, chemin, payload). Nouvelles colonnes `audit_log.request` et `label` (migration Version20261127180000, développement et app_test_catalog27), `GET /api/audit/{id}` super admin. `RequestAudit` joint la requête à chaque ligne, et crée une ligne pour les écritures sans trace Doctrine (SQL direct) et les actions refusées d'utilisateurs connectés ; déconnexion tracée. Liens multiples et archivage (`ARCHIVE`) tracés. Secrets masqués, fichiers résumés par leur taille, textes tronqués à 5000 caractères. Non couvert : consultations (GET), valeurs « avant » des écritures SQL directes, commandes console en SQL direct, webhooks Zoom, requêtes anonymes refusées. Les payloads contiennent des données personnelles : aucune purge ni durée de conservation définie. PHPUnit isolé 33 tests, 5 tests frontend, build réussis, lint 3 avertissements connus. Contrôle navigateur avec réponses simulées. Non commité.
+- 27 novembre 2026 — Validé par l'utilisateur (choix « Toute l'entité ») : `Training` renommé `Formation` partout : classes, propriétés, API `/api/formations`, écrans `/settings/formations`, permissions `FORMATIONS` / `EDIT_FORMATIONS`, tables et colonnes (`formation`, `formation_id`, `trainer_formation`, `formation_additional_organization`). Les anciennes adresses `/settings/trainings/*` redirigent. `Trainer` (formateur) inchangé. Les sections précédentes de ce fichier emploient les anciens noms. Les lignes d'audit antérieures gardent `Training` (journal en ajout seul), affichées « Formation ». Migration Version20261127190000 (renommages, sans perte) appliquée en développement et sur app_test_catalog27. Sauvegardes avant renommage (code et base dev) dans le dossier temporaire de la session IA, non durable. PHPUnit isolé 33 tests, 5 tests frontend, build réussis, lint 3 avertissements connus. Non commité.

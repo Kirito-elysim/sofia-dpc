@@ -10,13 +10,18 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity]
 #[UniqueEntity('hostUserId')]
 #[ApiResource(operations: [new GetCollection(), new Get(), new Post(), new Patch()], security: "is_granted('ROLE_SUPER_ADMIN')")]
-class ZoomAccount
+class ZoomAccount extends SoftDeletable
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $oauthConnectionId = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $sealedCredentials = null;
+
+    public function sealedCredentials(): ?string { return $this->sealedCredentials; }
 
     public function oauthConnectionId(): ?int { return $this->oauthConnectionId; }
 

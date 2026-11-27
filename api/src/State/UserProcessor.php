@@ -38,6 +38,9 @@ final class UserProcessor implements ProcessorInterface
             $data->customRole = $data->customRoleId === 0 ? null
                 : ($this->em->find(\App\Entity\CustomRole::class, $data->customRoleId)
                     ?? throw new UnprocessableEntityHttpException('Rôle personnalisé introuvable.'));
+            if ($data->customRole?->getDeletedAt()) {
+                throw new UnprocessableEntityHttpException('Rôle personnalisé introuvable.');
+            }
         }
         if ($data->customRole && $data->getRole() !== 'ROLE_LECTURE') {
             throw new UnprocessableEntityHttpException('Sélectionnez un seul rôle.');

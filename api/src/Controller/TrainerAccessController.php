@@ -65,6 +65,9 @@ class TrainerAccessController extends AbstractController
         /** @var User|null $existing */
         $existing = $this->em->createQuery('SELECT u FROM '.User::class.' u WHERE LOWER(u.email) = :email')
             ->setParameter('email', mb_strtolower($trainer->email))->setMaxResults(1)->getOneOrNullResult();
+        if ($existing?->getDeletedAt()) {
+            throw new ConflictHttpException('Le compte utilisant cet e-mail a été supprimé.');
+        }
         if ($existing) {
             // The previous sheet may sit outside the caller's organizations, or be deleted.
             $this->em->getFilters()->isEnabled('organization_scope') && $this->em->getFilters()->disable('organization_scope');

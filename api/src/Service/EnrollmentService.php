@@ -81,6 +81,7 @@ class EnrollmentService
             }
             $enrollment = $existing ?? new Enrollment($class, $ps);
             $enrollment->status = EnrollmentStatus::ACTIVE; // re-enrolling a cancelled PS reuses the row
+            $enrollment->restore();
             $this->em->persist($enrollment);
             $this->em->flush();
 
@@ -100,6 +101,7 @@ class EnrollmentService
     public function cancel(Enrollment $enrollment): void
     {
         $enrollment->status = EnrollmentStatus::CANCELLED;
+        $enrollment->markDeleted();
         $this->em->flush();
     }
 }

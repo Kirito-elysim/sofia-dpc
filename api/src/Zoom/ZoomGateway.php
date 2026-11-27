@@ -18,24 +18,30 @@ final class ZoomGateway
         private ?ZoomOAuth $oauth = null,
     ) {}
 
-    private function credential(ZoomAccount $account, string $field): string
+    private function cacheKey(ZoomAccount $account): string
     {
-        $value = $this->profiles[$account->profile][$field] ?? '';
-        if ('' === $value) {
-            throw new \RuntimeException('Configuration Zoom incomplète pour ce compte.');
-        }
-        return $value;
+        return $account->sealedCredentials() === null ? $account->profile : 'managed.'.$account->getId();
     }
 
     private function token(ZoomAccount $account): string
     {
-        $item = $this->tokens->getItem($account->profile);
+        $item = $this->tokens->getItem($this->cacheKey($account));
         if ($item->isHit() && is_string($cached = $item->get())) {
             return $cached;
         }
+        $credentials = $this->profiles[$account->profile] ?? [];
+        if (($sealed = $account->sealedCredentials()) !== null) {
+            $oauth = $this->oauth ?? throw new \LogicException('Connecteur Zoom indisponible.');
+            $credentials = json_decode($oauth->open($sealed), true, 512, JSON_THROW_ON_ERROR);
+        }
+        foreach (['client_id','client_secret','account_id'] as $field) {
+            if (($credentials[$field] ?? '') === '') {
+                throw new \RuntimeException('Configuration Zoom incomplète pour ce compte.');
+            }
+        }
         $result = $this->http->request('POST', 'https://zoom.us/oauth/token', [
-            'auth_basic' => [$this->credential($account, 'client_id'), $this->credential($account, 'client_secret')],
-            'body' => ['grant_type' => 'account_credentials', 'account_id' => $this->credential($account, 'account_id')],
+            'auth_basic' => [$credentials['client_id'], $credentials['client_secret']],
+            'body' => ['grant_type' => 'account_credentials', 'account_id' => $credentials['account_id']],
             'max_redirects' => 0, 'timeout' => 15,
         ])->toArray();
         $value = $result['access_token'] ?? '';
@@ -54,7 +60,7 @@ final class ZoomGateway
             throw new \LogicException('Réservation Zoom manquante.');
         }
         $options = ['max_redirects' => 0, 'timeout' => 20, 'json' => [
-            'type' => 2, 'topic' => $slot->virtualClass->training->title,
+            'type' => 2, 'topic' => $slot->virtualClass->formation->title,
             'start_time' => $slot->startsAt->format('Y-m-d\TH:i:s'), 'timezone' => 'Europe/Paris',
             'duration' => (int) (($slot->endsAt->getTimestamp() - $slot->startsAt->getTimestamp()) / 60),
             'settings' => ['approval_type' => 0, 'registrants_confirmation_email' => true, 'registrants_email_notification' => false],
@@ -97,7 +103,7 @@ final class ZoomGateway
         }
         $response = $this->http->request($method, $url, $options + ['auth_bearer' => $this->token($account)]);
         if (401 === $response->getStatusCode()) {
-            $this->tokens->deleteItem($account->profile);
+            $this->tokens->deleteItem($this->cacheKey($account));
             $response = $this->http->request($method, $url, $options + ['auth_bearer' => $this->token($account)]);
         }
         return $response;

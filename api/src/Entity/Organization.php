@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[UniqueEntity('code')]
 #[ApiResource(
     operations: [
-        new GetCollection(security: "is_granted('SOFIA_ORGANIZATIONS') or is_granted('SOFIA_TRAININGS') or is_granted('SOFIA_TRAINERS')"), new Get(),
+        new GetCollection(security: "is_granted('SOFIA_ORGANIZATIONS') or is_granted('SOFIA_FORMATIONS') or is_granted('SOFIA_TRAINERS')"), new Get(),
         new Post(security: "is_granted('ROLE_SUPER_ADMIN')"),
         new Patch(security: "is_granted('SOFIA_EDIT_ORGANIZATIONS')"),
         new Delete(security: "is_granted('SOFIA_EDIT_ORGANIZATIONS')", processor: SoftDeleteProcessor::class),

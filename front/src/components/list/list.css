@@ -48,3 +48,11 @@
 .ls-page .ls-pages button,.ls-pages b{box-sizing:border-box;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid #a7c3ff;border-radius:8px;background:none;color:#0049ff}
 .ls-pages b{border:0;background:linear-gradient(#0076ff,#003dff);color:#fff}.ls-pages svg{width:16px;height:16px}
 .ls-panel{padding:16px;border:1px solid var(--card-border);border-radius:12px;background:#fff;box-shadow:var(--card-shadow)}
+.ls-confirm{box-sizing:border-box;width:min(440px,92vw);margin:auto;padding:22px;border:1px solid #d9e3f3;border-radius:14px;box-shadow:0 18px 50px #0a255233;color:#0b1035;text-align:center}
+.ls-confirm::backdrop{background:#0a255255}
+.ls-confirm i{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#ffe8e8;color:#d10b0b}.ls-confirm i svg{width:20px;height:20px}
+.ls-page .ls-confirm h2{margin:10px 0;font-size:19px}.ls-page .ls-confirm p{margin-top:8px}.ls-confirm [role=alert]{color:#c20d1e}
+.ls-confirm footer{display:flex;justify-content:center;gap:10px;margin-top:18px}
+.ls-page .ls-confirm button{min-width:120px;height:38px;border:1px solid #c9d6e9;border-radius:8px;background:#fff;font-weight:600}
+.ls-page .ls-confirm button.danger{border-color:#d10b0b;background:#d10b0b;color:#fff}
+.ls-badge.red{background:#ffe8e8;color:#d10b0b}

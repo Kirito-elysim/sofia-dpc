@@ -22,7 +22,7 @@ final class LiveClassController extends AbstractController
     {
         $rows=$db->fetchAllAssociative(<<<SQL
             WITH slots AS (
-                SELECT s.*,t.title FROM class_slot s JOIN virtual_class c ON c.id=s.virtual_class_id JOIN training t ON t.id=c.training_id
+                SELECT s.*,t.title FROM class_slot s JOIN virtual_class c ON c.id=s.virtual_class_id JOIN formation t ON t.id=c.formation_id
                 WHERE {$scope->sql('t.organization_id')} AND c.status IN ('IN_PROGRESS','PLANNED') AND s.ends_at>now() AT TIME ZONE 'Europe/Paris'
                   AND s.starts_at<=(now() AT TIME ZONE 'Europe/Paris')+interval '30 minutes'
             ), devices AS (
@@ -95,7 +95,7 @@ final class LiveClassController extends AbstractController
         $status='SENT';
         try {
             if ('MAIL'===$channel) {
-                $mailer->send((new Email())->from($org->emailFrom)->to($recipient)->subject('Classe virtuelle · '.$slot->virtualClass->training->title)->text($body));
+                $mailer->send((new Email())->from($org->emailFrom)->to($recipient)->subject('Classe virtuelle · '.$slot->virtualClass->formation->title)->text($body));
             } else { $sms()->send(new SmsMessage($recipient,$body,$org->smsSender??'')); }
         } catch (\Exception) { $status='FAILED'; }
         $actor=$this->getUser()?->getUserIdentifier();

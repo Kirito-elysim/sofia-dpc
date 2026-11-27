@@ -12,12 +12,12 @@ export const userRoles = [
 // Trainer access is created from the trainer sheet, never from the Users screen.
 export const staffRoles = userRoles.filter(role => role.value !== 'ROLE_FORMATEUR')
 
-export type CustomRole = {id:number; name:string; permissions:string[]}
+export type CustomRole = {id:number; name:string; permissions:string[]; deletedAt?:string|null}
 
 export function useCustomRoles() {
   return useQuery({
     queryKey: ['custom-roles'],
-    queryFn: () => api<{roles:CustomRole[]; permissions:Record<string,string>; dependencies:Record<string,string[]>}>('/custom-roles'),
+    queryFn: () => api<{roles:CustomRole[]; usage:Record<string,number>; permissions:Record<string,string>; dependencies:Record<string,string[]>}>('/custom-roles'),
   })
 }
 

@@ -2,7 +2,7 @@
  * The building blocks of every list screen, modelled on « Utilisateurs ».
  * A new list is assembled from these: no screen draws its own header, table, badge or button.
  */
-import {useState,type ButtonHTMLAttributes,type ReactNode} from 'react'
+import {useEffect,useRef,useState,type ButtonHTMLAttributes,type ReactNode} from 'react'
 import {ArrowUpDown,ChevronLeft,ChevronRight,LockKeyhole,Pencil,Plus,RotateCcw,Search,SearchX,Trash2,type LucideIcon} from 'lucide-react'
 import {ActivationActionIcon,ActivationStatusIcon} from '../ActivationIcons'
 import {Picto,type PictoName} from '../Picto'
@@ -43,6 +43,10 @@ export function ActiveBadge({active}:{active:boolean}) {
   return <span className={'ls-badge '+(active?'green':'grey')}><ActivationStatusIcon active={active}/>{active?'Actif':'Inactif'}</span>
 }
 
+export function DeletedBadge({at}:{at?:string|null}) {
+  return <span className="ls-badge red"><Trash2 aria-hidden="true"/>Supprimé{at?' le '+new Date(at).toLocaleDateString('fr-FR'):''}</span>
+}
+
 export function Badge({tone,icon:Icon,children}:{tone:'green'|'grey'|'blue'|'purple'|'orange';icon?:LucideIcon;children:ReactNode}) {
   return <span className={'ls-badge '+tone}>{Icon&&<Icon aria-hidden="true"/>}{children}</span>
 }
@@ -73,6 +77,16 @@ export function LockedAction() {
 }
 export function IconAction({icon:Icon,...props}:ActionProps&{icon:LucideIcon}) {
   return <button type="button" className="ls-action edit icon" {...props}><Icon aria-hidden="true"/></button>
+}
+
+/** Centred confirmation of a deletion; the focus starts on « Annuler ». Without `onConfirm` it only explains a refusal. */
+export function ConfirmDialog({title,children,pending=false,error,onCancel,onConfirm}:{title:string;children:ReactNode;pending?:boolean;error?:string;onCancel:()=>void;onConfirm?:()=>void}) {
+  const ref=useRef<HTMLDialogElement>(null)
+  useEffect(()=>{const dialog=ref.current!;dialog.showModal();return ()=>dialog.close()},[])
+  return <dialog ref={ref} className="ls-confirm" aria-label={title} onCancel={e=>{e.preventDefault();if(!pending)onCancel()}}>
+    <i><Trash2 aria-hidden="true"/></i><h2>{title}</h2>{children}{error&&<p role="alert">{error}</p>}
+    <footer><button type="button" autoFocus disabled={pending} onClick={onCancel}>{onConfirm?'Annuler':'Fermer'}</button>{onConfirm&&<button type="button" className="danger" disabled={pending} onClick={onConfirm}>{pending?'Suppression…':'Supprimer'}</button>}</footer>
+  </dialog>
 }
 
 export function EmptyState({title,text,action}:{title:string;text?:string;action?:{label:string;onClick:()=>void}}) {

@@ -50,6 +50,20 @@ final class ScopedCatalogProcessor implements ProcessorInterface
         } else {
             $this->scope->require($data->organization?->getId());
         }
+        if ($data instanceof \App\Entity\Formation) {
+            foreach ($data->getAdditionalOrganizations() as $organization) {
+                $this->scope->require($organization->getId());
+            }
+            return $this->em->wrapInTransaction(function () use ($data, $operation, $uriVariables, $context) {
+                if ($data->targetAudience) {
+                    $this->em->refresh($data->targetAudience, \Doctrine\DBAL\LockMode::PESSIMISTIC_READ);
+                    if ($data->targetAudience->getDeletedAt()) {
+                        throw new \Symfony\Component\HttpKernel\Exception\ConflictHttpException('Ce public cible a été supprimé.');
+                    }
+                }
+                return $this->persist->process($data, $operation, $uriVariables, $context);
+            });
+        }
         return $this->persist->process($data, $operation, $uriVariables, $context);
     }
 }

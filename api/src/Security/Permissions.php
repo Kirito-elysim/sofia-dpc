@@ -11,22 +11,22 @@ final class Permissions extends Voter
     public const READ = [
         'DASHBOARD' => 'Tableau de bord', 'PLANNING' => 'Planning',
         'CLASSES' => 'Classes virtuelles', 'LEARNERS' => 'Participants',
-        'LIVE' => 'Suivi en direct', 'TRAININGS' => 'Formations',
+        'LIVE' => 'Suivi en direct', 'FORMATIONS' => 'Formations',
         'TRAINERS' => 'Formateurs', 'TIME_SLOTS' => 'Créneaux',
         'ORGANIZATIONS' => 'Organismes', 'CONFIGS' => 'Configurations des classes virtuelles',
     ];
     public const WRITE = [
         'SCHEDULE' => 'Planifier les classes', 'ENROLL' => 'Gérer les inscriptions',
-        'REMIND' => 'Envoyer des relances', 'EDIT_TRAININGS' => 'Gérer les formations',
+        'REMIND' => 'Envoyer des relances', 'EDIT_FORMATIONS' => 'Gérer les formations',
         'EDIT_TRAINERS' => 'Gérer les formateurs', 'EDIT_ORGANIZATIONS' => 'Modifier les organismes',
         'EDIT_CONFIGS' => 'Gérer les configurations',
     ];
 
     public const DEPENDENCIES = [
-        'SCHEDULE' => ['CLASSES', 'PLANNING', 'TRAININGS', 'TRAINERS', 'TIME_SLOTS'],
+        'SCHEDULE' => ['CLASSES', 'PLANNING', 'FORMATIONS', 'TRAINERS', 'TIME_SLOTS'],
         'ENROLL' => ['CLASSES'],
-        'EDIT_TRAININGS' => ['TRAININGS'],
-        'EDIT_TRAINERS' => ['TRAINERS', 'TRAININGS'],
+        'EDIT_FORMATIONS' => ['FORMATIONS'],
+        'EDIT_TRAINERS' => ['TRAINERS', 'FORMATIONS'],
         'EDIT_ORGANIZATIONS' => ['ORGANIZATIONS'],
         'EDIT_CONFIGS' => ['CONFIGS'],
     ];

@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** History of mails/SMS shown on the participant sheet (proof that a PS was notified). */
 #[ORM\Entity]
-class MessageLog
+class MessageLog extends SoftDeletable
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;

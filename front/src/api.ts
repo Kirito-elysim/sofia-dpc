@@ -42,7 +42,7 @@ export type VirtualClass = {
   capacity: number
   status: 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
   enrolledCount: number
-  training: { title: string; organization: { name: string; code: string } }
+  formation: { title: string; organization: { name: string; code: string } }
 }
 export type Enrollment = {
   id: number

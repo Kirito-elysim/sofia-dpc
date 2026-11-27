@@ -110,3 +110,8 @@
 .od-table-code{display:inline-block;padding:3px 7px;border-radius:5px;background:#eef2f8;color:#354963;font-size:12px;font-weight:650;white-space:nowrap}
 .od-table-status::before{content:none}
 .od-body small{display:inline-flex;align-items:center;gap:6px;color:#475569}
+.od-table-name{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
+.od-table-name i{display:grid;place-items:center;flex:none;width:32px;height:32px;overflow:hidden;border:2px solid var(--org);border-radius:8px;background:#fff;color:var(--org)}
+.od-table-name i img{width:100%;height:100%;object-fit:contain}.od-table-name i svg{width:16px;height:16px}
+.od-table-name i.blue{--org:#005dff}.od-table-name i.purple{--org:#8144cc}.od-table-name i.gray{--org:#58647a}
+.od-table-name .ls-clip{max-width:130px}

@@ -33,9 +33,12 @@ analytique) ne doit PAS être développée : seulement visible dans le menu avec
 
 ## Conventions
 - Code et noms techniques en anglais ; textes de l'interface en **français**.
-- Entités principales : Organization, Training, TimeSlot, Trainer, ZoomAccount, User, VirtualClass, ClassSlot,
+  Exception validée : l'entité de formation s'appelle `Formation` (table `formation`, API `/api/formations`), pas `Training`.
+- Entités principales : Organization, Formation, TimeSlot, Trainer, ZoomAccount, User, VirtualClass, ClassSlot,
   Participant (PS), Enrollment, AttendanceEvent, MessageTemplate, MessageLog, AuditLog.
 - Statuts de classe (liste fermée) : PLANNED « Planifiée », IN_PROGRESS « En cours », DONE « Terminée », CANCELLED « Annulée ».
+- Aucune suppression définitive : toute entité étend `SoftDeletable` (colonne `deleted_at`) et une suppression
+  renseigne cette date. Seule exception : le journal d'audit, en ajout seul et jamais supprimé.
 - Aucune donnée réelle de PS dans le code, les fixtures ou les tests : données fictives uniquement.
 - Secrets uniquement en variables d'environnement (`.env.local`, jamais commités).
 - Avant de considérer une tâche terminée : lint + tests + build passent.

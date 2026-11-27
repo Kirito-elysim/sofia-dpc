@@ -2,7 +2,7 @@
 
 namespace App\Tests\Zoom;
 
-use App\Entity\{ClassSlot, Organization, TimeSlot, Training, VirtualClass, ZoomAccount};
+use App\Entity\{ClassSlot, Organization, TimeSlot, Formation, VirtualClass, ZoomAccount};
 use App\Zoom\ZoomGateway;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -15,7 +15,7 @@ final class ZoomGatewayTest extends TestCase
     {
         $account = new ZoomAccount('Test', 'host@example.test', 'A');
         $day = new \DateTimeImmutable('2030-06-03', new \DateTimeZone('Europe/Paris'));
-        $slot = new ClassSlot(new VirtualClass(new Training(new Organization('Test', 'TEST', 'demo@example.test'), 'Cours'), $day), new TimeSlot('Matin', '09:00', '13:00'));
+        $slot = new ClassSlot(new VirtualClass(new Formation(new Organization('Test', 'TEST', 'demo@example.test'), 'Cours'), $day), new TimeSlot('Matin', '09:00', '13:00'));
         $slot->zoomAccount = $account;
         $slot->startsAt = $day->setTime(9, 0);
         $slot->endsAt = $day->setTime(13, 0);

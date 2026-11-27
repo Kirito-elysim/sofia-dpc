@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, Settings, ShieldCheck, SlidersHorizontal, UserCog, UserRound, UsersRound, Video, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, Settings, ShieldCheck, UserCog, UserRound, UsersRound, Users, Video, type LucideIcon } from 'lucide-react'
 import { NavLink, Outlet, useMatch } from 'react-router-dom'
 import { api, impersonate, type Me } from '../api'
 import '../planning.css'
@@ -13,14 +13,13 @@ const main: Entry[] = [
   [Activity,'Suivi en direct','/live','LIVE'],
 ]
 const settings: Entry[] = [
-  [GraduationCap,'Formations','/settings/trainings','TRAININGS'], [Clock,'Créneaux','/settings/time-slots','TIME_SLOTS'],
+  [GraduationCap,'Formations','/settings/formations','FORMATIONS'], [Clock,'Créneaux','/settings/time-slots','TIME_SLOTS'],
   [UserRound,'Formateurs','/settings/trainers','TRAINERS'], [Mail,'Modèles de messages','/settings/message-templates','GLOBAL'],
 ]
 const administration: Entry[] = [
   [Building2,'Organismes','/settings/organizations','ORGANIZATIONS'],
   [UserCog,'Utilisateurs','/settings/users','GLOBAL'], [ShieldCheck,'Rôles et permissions','/settings/roles','GLOBAL'],
-  [SlidersHorizontal,'Configurations des classes virtuelles','/settings/virtual-class-configs','CONFIGS'],
-  [Video,'Comptes Zoom','/settings/zoom-accounts','GLOBAL'],
+  [Video,'Paramètres Zoom','/settings/zoom','CONFIGS'], [Users,'Publics cibles','/settings/target-audiences','EDIT_FORMATIONS'],
 ]
 
 function navigation([Icon,label,to]: Entry) {
@@ -31,7 +30,7 @@ function navigation([Icon,label,to]: Entry) {
 export default function Layout({me}: {me: Me}) {
   const orgPage = useMatch("/settings/organizations")
   const settingsPage = useMatch("/settings/:section")
-  const heading = settingsPage?.params.section === "message-templates" ? "Modèles de messages" : settingsPage?.params.section === "users" ? "Utilisateurs" : orgPage ? "Organismes" : settingsPage?.params.section === "trainings" ? "Formations" : settingsPage?.params.section === "trainers" ? "Formateurs" : null
+  const heading = settingsPage?.params.section === "message-templates" ? "Modèles de messages" : settingsPage?.params.section === "users" ? "Utilisateurs" : orgPage ? "Organismes" : settingsPage?.params.section === "formations" ? "Formations" : settingsPage?.params.section === "trainers" ? "Formateurs" : null
   const planning = useMatch("/planning")
   const dashboard = useMatch("/dashboard")
   const [organization, setOrganization] = useState("Tous")

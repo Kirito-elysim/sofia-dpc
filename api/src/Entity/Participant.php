@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /** "PS" : professionnel de santé. Counted once per class via Enrollment. */
 #[ORM\Entity]
-class Participant
+class Participant extends SoftDeletable
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;

@@ -2,10 +2,11 @@ import {useEffect,useRef,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {CalendarDays,Info,List,Save,Trash2,X} from 'lucide-react'
 import {api} from '../api'
-import {ActiveBadge,DataTable,DeleteAction,EditAction,EmptyState,Filters,ListHeading,ListPage,PageHeader,RowActions,SearchField,SelectField,ToggleAction,ViewToggle} from '../components/list/List'
+import {ActiveBadge,DataTable,DeleteAction,DeletedBadge,EditAction,EmptyState,Filters,ListHeading,ListPage,PageHeader,RowActions,SearchField,SelectField,ToggleAction,ViewToggle} from '../components/list/List'
+import {useDeleted} from '../components/list/useDeleted'
 import './time-slots.css'
 
-type Slot={id:number;label:string;startTime:string;endTime:string;durationMin:number;active:boolean}
+type Slot={deletedAt?:string|null;id:number;label:string;startTime:string;endTime:string;durationMin:number;active:boolean}
 const minutes=(time:string)=>Number(time.slice(0,2))*60+Number(time.slice(3,5))
 const duration=(total:number)=>total%60?`${Math.floor(total/60)} h ${String(total%60).padStart(2,'0')}`:`${total/60} h`
 const patch=(id:number,body:object)=>api('/time-slots/'+id,{method:'PATCH',headers:{'Content-Type':'application/merge-patch+json'},body:JSON.stringify(body)})
@@ -19,7 +20,9 @@ export default function TimeSlots({canWrite}:{canWrite:boolean}) {
   const change=useMutation({mutationFn:({slot,remove}:{slot:Slot;remove?:boolean})=>remove?api('/time-slots/'+slot.id,{method:'DELETE'}):patch(slot.id,{active:!slot.active}),
     onSuccess:()=>{setRemoving(null);void client.invalidateQueries()}})
   const rows=list.data??[]
-  const filtered=rows.filter(slot=>(!status||String(slot.active)===status)&&slot.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+  const deleted=useDeleted<Slot[]>('time-slots',status)
+  const source=deleted.viewing?deleted.data??[]:rows
+  const filtered=source.filter(slot=>(!status||deleted.viewing||String(slot.active)===status)&&slot.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
     .sort((x,y)=>x.startTime.localeCompare(y.startTime))
   const reset=()=>{setQuery('');setStatus('')}
   const open=(slot:Slot|'new')=>{change.reset();setEditing(slot)}
@@ -30,24 +33,24 @@ export default function TimeSlots({canWrite}:{canWrite:boolean}) {
       <PageHeader icon="calendar" title="Créneaux" subtitle="Définissez les plages horaires disponibles pour les classes virtuelles." add={canWrite?{label:'Ajouter un créneau',onClick:()=>open('new')}:undefined}/>
       <Filters onReset={reset}>
         <SearchField label="Rechercher un créneau" value={query} onChange={setQuery}/>
-        <SelectField label="Statut" icon="done" all="Tous les statuts" value={status} onChange={setStatus} options={[{value:'true',label:'Actif'},{value:'false',label:'Inactif'}]}/>
+        <SelectField label="Statut" icon="done" all="Tous les statuts" value={status} onChange={setStatus} options={[{value:'true',label:'Actif'},{value:'false',label:'Inactif'},...deleted.options]}/>
       </Filters>
-      {list.error&&<p role="alert">{list.error.message}</p>}{!removing&&change.error&&<p role="alert">{change.error.message}</p>}
-      {view==='calendar'?<div className="ls-card"><ListHeading title="Liste des créneaux" count={rows.length} tools={views}/><ul className="slots-day" aria-label="Créneaux sur la journée">{filtered.map(s=><li key={s.id}><span>{s.label}</span><div><b className={s.active?'':'off'} style={{left:minutes(s.startTime)/14.4+'%',width:s.durationMin/14.4+'%'}} title={`${s.startTime} – ${s.endTime}`}/></div><small>{s.startTime} – {s.endTime}</small></li>)}<li className="slots-hours" aria-hidden="true"><span/><div>{[0,6,12,18,24].map(h=><em key={h} style={{left:h/.24+'%'}}>{h} h</em>)}</div><small/></li></ul></div>
-      :<DataTable title="Liste des créneaux" tools={views} rows={filtered} total={rows.length} loading={list.isLoading} filterKey={query+'|'+status} rowKey={s=>s.id} rowName={s=>s.label}
+      {list.error&&<p role="alert">{list.error.message}</p>}{deleted.error&&<p role="alert">{deleted.error.message}</p>}{!removing&&change.error&&<p role="alert">{change.error.message}</p>}
+      {view==='calendar'&&!deleted.viewing?<div className="ls-card"><ListHeading title="Liste des créneaux" count={rows.length} tools={views}/><ul className="slots-day" aria-label="Créneaux sur la journée">{filtered.map(s=><li key={s.id}><span>{s.label}</span><div><b className={s.active?'':'off'} style={{left:minutes(s.startTime)/14.4+'%',width:s.durationMin/14.4+'%'}} title={`${s.startTime} – ${s.endTime}`}/></div><small>{s.startTime} – {s.endTime}</small></li>)}<li className="slots-hours" aria-hidden="true"><span/><div>{[0,6,12,18,24].map(h=><em key={h} style={{left:h/.24+'%'}}>{h} h</em>)}</div><small/></li></ul></div>
+      :<DataTable title="Liste des créneaux" tools={views} rows={filtered} total={source.length} loading={list.isLoading||deleted.loading} filterKey={query+'|'+status} rowKey={s=>s.id} rowName={s=>s.label}
         columns={[
           {key:'label',label:'Libellé',sort:s=>s.label,render:s=><strong>{s.label}</strong>},
           {key:'startTime',label:'Heure de début',sort:s=>s.startTime,render:s=>s.startTime},
           {key:'endTime',label:'Heure de fin',sort:s=>s.endTime,render:s=>s.endTime},
           {key:'duration',label:'Durée',sort:s=>s.durationMin,render:s=>duration(s.durationMin)},
-          {key:'active',label:'Statut',sort:s=>String(s.active),render:s=><ActiveBadge active={s.active}/>},
+          {key:'active',label:'Statut',sort:s=>String(s.active),render:s=>deleted.viewing?<DeletedBadge at={s.deletedAt}/>:<ActiveBadge active={s.active}/>},
         ]}
-        actions={canWrite?s=><RowActions>
+        actions={canWrite&&!deleted.viewing?s=><RowActions>
           <EditAction aria-label={'Modifier '+s.label} onClick={()=>open(s)}/>
           <ToggleAction active={s.active} disabled={change.isPending} onClick={()=>change.mutate({slot:s})}/>
           <DeleteAction aria-label={'Supprimer '+s.label} disabled={!usage.data} onClick={()=>{change.reset();setRemoving(s)}}/>
         </RowActions>:undefined}
-        empty={rows.length?<EmptyState title="Aucun résultat pour ce filtre" text="Aucun créneau ne correspond à votre recherche ou à votre filtre." action={{label:'Réinitialiser les filtres',onClick:reset}}/>:<EmptyState title="Aucun créneau"/>}/>}
+        empty={source.length||deleted.viewing?<EmptyState title="Aucun résultat pour ce filtre" text="Aucun créneau ne correspond à votre recherche ou à votre filtre." action={{label:'Réinitialiser les filtres',onClick:reset}}/>:<EmptyState title="Aucun créneau"/>}/>}
     </div>
     {editing&&<Panel key={editing==='new'?'new':editing.id} slot={editing==='new'?null:editing} close={()=>setEditing(null)}/>}
     {removing&&<Confirm used={!!used} slot={removing} pending={change.isPending} error={change.error?.message} close={()=>setRemoving(null)} confirm={()=>change.mutate({slot:removing,remove:!used})}/>}

@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(columns: ['virtual_class_id', 'participant_id'])]
-class Enrollment
+class Enrollment extends SoftDeletable
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;

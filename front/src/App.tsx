@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { api, type Me } from './api'
+import FormationSheet from './pages/FormationSheet'
+import FormationWizard from './pages/FormationWizard'
 import RoleSettings from './pages/RoleSettings'
 import ScopedDashboard from './pages/ScopedDashboard'
 import Layout from './components/Layout'
@@ -17,12 +19,25 @@ import ChangePassword from './pages/ChangePassword'
 import Login from './pages/Login'
 import CreateUser, { EditUser } from './pages/CreateUser'
 import CreateTrainer, { EditTrainer } from './pages/TrainerForm'
-import VirtualClassConfigs from './pages/VirtualClassConfigs'
+import ZoomWorkspace from './pages/ZoomWorkspace'
 import OrganizationWizard from './pages/OrganizationWizard'
 import OrganizationProfile from './pages/OrganizationProfile'
 import Organizations from './pages/Organizations'
 import TimeSlots from './pages/TimeSlots'
-import { Trainers, Trainings, Users, ZoomAccounts } from './pages/Settings'
+import { Trainers, Formations, Users } from './pages/Settings'
+import TargetAudiences from './pages/TargetAudiences'
+
+function LegacyFormationLink() {
+  const location = useLocation()
+  return <Navigate replace to={{ ...location, pathname: location.pathname.replace('/settings/trainings', '/settings/formations') }}/>
+}
+
+function LegacyZoomLink({ initial }: { initial: 'connection' | 'configs' }) {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  if (!params.has('step')) params.set('step', initial)
+  return <Navigate replace to={{ pathname: '/settings/zoom', search: params.toString(), hash: location.hash }}/>
+}
 
 export default function App() {
   const me = useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/auth/me') })
@@ -41,8 +56,8 @@ export default function App() {
   const global = me.data.roles.includes('ROLE_SUPER_ADMIN')
   const can = (permission: string) => global || (me.data.permissions?.includes(permission) ?? false)
   const home = ([['DASHBOARD','/dashboard'],['PLANNING','/planning'],['CLASSES','/classes'],['LEARNERS','/learners'],
-    ['LIVE','/live'],['TRAININGS','/settings/trainings'],['TRAINERS','/settings/trainers'],['TIME_SLOTS','/settings/time-slots'],
-    ['ORGANIZATIONS','/settings/organizations'],['CONFIGS','/settings/virtual-class-configs']] as const)
+    ['LIVE','/live'],['FORMATIONS','/settings/formations'],['TRAINERS','/settings/trainers'],['TIME_SLOTS','/settings/time-slots'],
+    ['ORGANIZATIONS','/settings/organizations'],['CONFIGS','/settings/zoom']] as const)
     .find(([permission]) => can(permission))?.[1] ?? (me.data.trainer ? '/my-classes' : undefined)
   return (
     <Routes>
@@ -56,10 +71,16 @@ export default function App() {
         {can('LEARNERS')&&<Route path="learners/:id" element={<LearnerSheet canRemind={can('REMIND')}/>}/>}
         {can('CLASSES')&&<Route path="classes" element={<Classes/>}/>}
         {can('CLASSES')&&<Route path="classes/:id" element={<ClassDetail canEdit={can('ENROLL')}/>}/>}
-        {can('CONFIGS')&&<Route path="settings/virtual-class-configs" element={<VirtualClassConfigs canWrite={can('EDIT_CONFIGS')}/>}/>}
+        {can('CONFIGS')&&<Route path="settings/zoom" element={<ZoomWorkspace global={global} canWrite={can('EDIT_CONFIGS')}/>}/>}
+        {can('CONFIGS')&&<Route path="settings/virtual-class-configs" element={<LegacyZoomLink initial="configs"/>}/>}
         {can('EDIT_ORGANIZATIONS')&&<Route path="settings/organizations/:id/edit" element={<OrganizationProfile/>}/>}
         {can('ORGANIZATIONS')&&<Route path="settings/organizations" element={<Organizations canWrite={can('EDIT_ORGANIZATIONS')} canCreate={global}/>}/>}
-        {can('TRAININGS')&&<Route path="settings/trainings" element={<Trainings canWrite={can('EDIT_TRAININGS')}/>}/>}
+        {can('FORMATIONS')&&can('EDIT_FORMATIONS')&&<Route path="settings/formations/new" element={<FormationWizard/>}/>}
+        {can('FORMATIONS')&&can('EDIT_FORMATIONS')&&<Route path="settings/formations/:id/edit" element={<FormationSheet canReadClasses={can('CLASSES')} canSchedule={can('SCHEDULE')}/>}/>}
+        {can('FORMATIONS')&&can('EDIT_FORMATIONS')&&<Route path="settings/formations/:id/resume" element={<FormationWizard/>}/>}
+        {can('FORMATIONS')&&<Route path="settings/formations" element={<Formations canWrite={can('EDIT_FORMATIONS')}/>}/>}
+        {can('EDIT_FORMATIONS')&&<Route path="settings/target-audiences" element={<TargetAudiences/>}/>}
+        <Route path="settings/trainings/*" element={<LegacyFormationLink/>}/>
         {can('TIME_SLOTS')&&<Route path="settings/time-slots" element={<TimeSlots canWrite={global}/>}/>}
         {can('EDIT_TRAINERS')&&<Route path="settings/trainers/new" element={<CreateTrainer/>}/>}
         {can('EDIT_TRAINERS')&&<Route path="settings/trainers/:id/edit" element={<EditTrainer/>}/>}
@@ -72,7 +93,7 @@ export default function App() {
           <Route path="settings/users/:id/edit" element={<EditUser/>}/>
           <Route path="settings/users" element={<Users/>}/>
           <Route path="settings/roles" element={<RoleSettings/>}/>
-          <Route path="settings/zoom-accounts" element={<ZoomAccounts/>}/>
+          <Route path="settings/zoom-accounts" element={<LegacyZoomLink initial="connection"/>}/>
         </>}
         <Route path="*" element={home?<Navigate to={home} replace/>:<p className="p-6">Aucune rubrique accessible avec votre rôle.</p>}/>
       </Route>

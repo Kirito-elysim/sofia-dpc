@@ -4,7 +4,7 @@ namespace App\Controller;
 
 use App\Message\ZoomCapacityAlert;
 use Symfony\Component\Messenger\MessageBusInterface;
-use App\Entity\{ClassSlot, TimeSlot, Trainer, Training, VirtualClass, ZoomAccount};
+use App\Entity\{ClassSlot, TimeSlot, Trainer, Formation, VirtualClass, ZoomAccount};
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -25,13 +25,13 @@ final class ClassSchedulingController extends AbstractController
         if (null !== $requestKey && !Uuid::isValid($requestKey)) {
             throw new UnprocessableEntityHttpException('Clé de réservation invalide.');
         }
-        $training = $em->find(Training::class, $this->positiveId($input['trainingId'] ?? null));
+        $formation = $em->find(Formation::class, $this->positiveId($input['formationId'] ?? null));
         $day = is_string($input['date'] ?? null) ? $input['date'] : '';
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $day, new \DateTimeZone('Europe/Paris'));
-        if (!$date || $date->format('Y-m-d') !== $day || !$training?->active || !$training->organization->active || $training->getDeletedAt() || $training->organization->getDeletedAt()) {
+        if (!$date || $date->format('Y-m-d') !== $day || !$formation?->active || !$formation->organization->active || $formation->getDeletedAt() || $formation->organization->getDeletedAt()) {
             throw new UnprocessableEntityHttpException('Date ou formation invalide.');
         }
-        $class = new VirtualClass($training, $date, $this->positiveId($input['capacity'] ?? $training->defaultCapacity));
+        $class = new VirtualClass($formation, $date, $this->positiveId($input['capacity'] ?? 20));
         $class->dpcAction = $this->text($input['dpcAction'] ?? null, 80);
         $class->dpcSession = $this->text($input['dpcSession'] ?? null, 80);
         $class->reference = empty($input['reference']) ? null : $this->text($input['reference'], 100);
@@ -56,11 +56,16 @@ final class ClassSchedulingController extends AbstractController
                 $class->scheduleKey = $requestKey;
                 $class->scheduleFingerprint = $fingerprint;
             }
+            // Hold the formation until the session commits, including when deletion is requested concurrently.
+            $em->refresh($formation, \Doctrine\DBAL\LockMode::PESSIMISTIC_READ);
+            if (!$formation->active || $formation->getDeletedAt()) {
+                throw new UnprocessableEntityHttpException('Cette formation ne peut plus accueillir de session.');
+            }
             // All schedulers acquire host locks in the same order. Under READ COMMITTED
             // the following overlap reads see the preceding scheduler's committed slots.
             $config = $db->fetchAssociative('SELECT c.id,c.policy,c.hosts FROM organization o
                 JOIN virtual_class_config c ON c.id=o.virtual_class_config_id
-                WHERE o.id=? AND NOT c.archived',[$training->organization->getId()]);
+                WHERE o.id=? AND NOT c.archived',[$formation->organization->getId()]);
             $hosts = $config
                 ? $db->fetchFirstColumn('SELECT id FROM zoom_account WHERE active AND id IN
                     (SELECT value::int FROM jsonb_array_elements_text(?::jsonb)) ORDER BY id FOR UPDATE',[$config['hosts']])
@@ -72,7 +77,7 @@ final class ClassSchedulingController extends AbstractController
                 $slotId = $this->positiveId($row['timeSlotId'] ?? null);
                 $time = $em->find(TimeSlot::class, $slotId);
                 $trainer = $em->find(Trainer::class, $this->positiveId($row['trainerId'] ?? null));
-                if (isset($seen[$slotId]) || !$time?->active || !$time->getDurationMin() || $time->getDeletedAt() || !$trainer?->active || $trainer->getDeletedAt() || !$trainer->getOrganizations()->contains($training->organization)) {
+                if (isset($seen[$slotId]) || !$time?->active || !$time->getDurationMin() || $time->getDeletedAt() || !$trainer?->active || $trainer->getDeletedAt() || !$trainer->getOrganizations()->contains($formation->organization)) {
                     throw new UnprocessableEntityHttpException('Créneau répété, horaire invalide ou formateur hors de l’organisme.');
                 }
                 $seen[$slotId] = true;
@@ -92,7 +97,7 @@ final class ClassSchedulingController extends AbstractController
                 if (!$slot->zoomAccount) {
                     $db->rollBack();
                     $em->clear();
-                    $bus->dispatch(new ZoomCapacityAlert($training->getId() ?? 0, $day, $time->label));
+                    $bus->dispatch(new ZoomCapacityAlert($formation->getId() ?? 0, $day, $time->label));
                     return $this->json(['code' => 'NO_ZOOM_ACCOUNT_AVAILABLE', 'detail' => 'Aucun compte Zoom disponible pour ce créneau.'], 409);
                 }
                 $slot->zoomPolicy = [

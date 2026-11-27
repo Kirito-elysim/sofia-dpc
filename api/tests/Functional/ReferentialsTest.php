@@ -16,7 +16,7 @@ class ReferentialsTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = static::createClient();
-        $this->em()->getConnection()->executeStatement('TRUNCATE audit_log, enrollment, trainer, time_slot, participant, virtual_class, training, organization, "user" RESTART IDENTITY CASCADE');
+        $this->em()->getConnection()->executeStatement('TRUNCATE audit_log, enrollment, trainer, time_slot, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
     }
 
     private function em(): EntityManagerInterface
@@ -178,6 +178,41 @@ class ReferentialsTest extends WebTestCase
         $actions = array_map(fn (AuditLog $a) => $a->action.':'.$a->entity, $this->em()->getRepository(AuditLog::class)->findBy([], ['id' => 'ASC']));
         $this->assertContains('CREATE:Organization', $actions);
         $this->assertContains('UPDATE:Organization', $actions);
+        $this->assertContains('REQUEST_FAILED:organizations', $actions);
+    }
+
+    public function testAuditKeepsPayloadAndDeletedContentWithoutSecrets(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $id = $this->call('POST', '/api/target-audiences', ['name' => 'Médecins', 'acronym' => 'MED'])['id'];
+        $this->call('DELETE', "/api/target-audiences/$id");
+        $this->call('POST', '/api/users', ['email' => 'p@example.test', 'name' => 'P', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->call('POST', '/api/auth/logout');
+
+        $entries = $this->em()->getRepository(AuditLog::class)->findBy([], ['id' => 'ASC']);
+        $find = static fn (string $key): AuditLog => current(array_filter($entries, static fn (AuditLog $a) => $a->action.':'.$a->entity === $key)) ?: throw new \LogicException($key);
+        $created = $find('CREATE:TargetAudience');
+        $this->assertSame('MED', (($created->request ?? [])['payload'] ?? [])['acronym'] ?? null);
+        $deleted = $find('DELETE:TargetAudience');
+        $this->assertSame('Médecins', $deleted->label);
+        $this->assertSame(['MED', null], $deleted->data['acronym']);
+        $this->assertStringNotContainsString('un-mot-de-passe-long', (string) json_encode(array_map(static fn (AuditLog $a) => [$a->data, $a->request], $entries)));
+        $find('LOGOUT:auth');
+
+        // Many-to-many links are traced once, with what they were and what they became.
+        $this->client->loginUser($this->em()->getRepository(User::class)->findOneBy(['email' => 'SUPER_ADMIN@example.test']) ?? throw new \LogicException());
+        $org = $this->org();
+        $other = $this->call('POST', '/api/organizations', ['name' => 'Autre', 'code' => 'AUTRE', 'emailFrom' => 'autre@example.test', 'siret' => '12345678901235'])['id'];
+        $formation = $this->call('POST', '/api/formations', ['title' => 'Liens', 'organization' => "/api/organizations/$org", 'additionalOrganizations' => ["/api/organizations/$other"]])['id'];
+        $this->call('PATCH', "/api/formations/$formation", ['additionalOrganizations' => []]);
+        $this->call('PATCH', "/api/formations/$formation", ['publicationStatus' => 'archived']);
+        $rows = $this->em()->getRepository(AuditLog::class)->findBy(['entity' => 'Formation', 'entityId' => $formation], ['id' => 'ASC']);
+        $this->assertSame(['CREATE', 'UPDATE', 'ARCHIVE'], array_map(static fn (AuditLog $a) => $a->action, $rows));
+        $this->assertSame([[['id' => $other, 'label' => 'Autre']], []], $rows[1]->data['additionalOrganizations']);
+
+        $this->loginAs('ADMIN');
+        $this->call('GET', '/api/audit/'.$deleted->getId());
+        $this->assertResponseStatusCodeSame(403);
     }
 
     public function testScheduleBlocksOverlapAndKeepsOneClassForTwoSlots(): void
@@ -185,13 +220,13 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $training = $this->call('POST', '/api/trainings', ['title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Test', 'lastName' => 'Zoom', 'email' => 'trainer@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $slots = [];
         foreach ([['Matin', '09:00', '13:00'], ['Après-midi', '14:00', '17:00']] as [$label, $startTime, $endTime]) {
             $slots[] = ['trainerId' => $trainer, 'timeSlotId' => $this->call('POST', '/api/time-slots', compact('label', 'startTime', 'endTime'))['id']];
         }
-        $body = ['date' => '2030-06-03', 'trainingId' => $training, 'dpcAction' => '001', 'dpcSession' => '002', 'slots' => $slots];
+        $body = ['date' => '2030-06-03', 'formationId' => $formation, 'dpcAction' => '001', 'dpcSession' => '002', 'slots' => $slots];
         $this->assertSame('NO_ZOOM_ACCOUNT_AVAILABLE', $this->call('POST', '/api/scheduled-classes', $body)['code']);
         $this->assertResponseStatusCodeSame(409);
         $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom 1', 'profile' => 'DEMO', 'hostUserId' => 'test-host']);
@@ -232,7 +267,7 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
@@ -243,7 +278,7 @@ class ReferentialsTest extends WebTestCase
         $configPayload['policy']['passcode']=true;
         $config=$this->call('POST','/api/virtual-class-configs',$configPayload);
         self::assertResponseIsSuccessful();
-        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','trainingId' => $training,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','formationId' => $formation,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
         $this->call('POST','/api/virtual-class-configs',[...$configPayload,'id'=>$config['id'],'policy'=>['waitingRoom'=>true,
             'passcode'=>false,'joinBeforeHost'=>false,'recording'=>'account_default']]);
         self::assertResponseIsSuccessful();
@@ -298,11 +333,11 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $training = $this->call('POST', '/api/trainings', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
-        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','trainingId' => $training,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','formationId' => $formation,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
         $this->em()->getConnection()->executeStatement("UPDATE class_slot SET meeting_number='12345678901' WHERE virtual_class_id=?", [$class]);
         $this->call('POST', "/api/virtual-classes/$class/enrollments", ['firstName' => 'Paul','lastName' => 'Test','email' => 'ps@example.test']);
         $ts = (string) time();
@@ -414,7 +449,7 @@ class ReferentialsTest extends WebTestCase
         $first = $this->org();
         $second = $this->call('POST', '/api/organizations', ['name' => 'PHOCEA', 'code' => 'PHO', 'emailFrom' => 'p@example.test'])['id'];
         $outside = $this->call('POST', '/api/organizations', ['name' => 'Autre', 'code' => 'OTHER', 'emailFrom' => 'o@example.test'])['id'];
-        $role = $this->call('POST', '/api/custom-roles', ['name' => 'Coordinateur DPC', 'permissions' => ['EDIT_TRAININGS']]);
+        $role = $this->call('POST', '/api/custom-roles', ['name' => 'Coordinateur DPC', 'permissions' => ['EDIT_FORMATIONS']]);
         $account = $this->call('POST', '/api/users', [
             'name' => 'Coordination',
             'email' => 'coordinateur@example.test',
@@ -433,12 +468,12 @@ class ReferentialsTest extends WebTestCase
 
         self::assertEqualsCanonicalizing([$first, $second], array_column($this->call('GET', '/api/organizations'), 'id'));
         foreach ([$first, $second] as $organization) {
-            $this->call('POST', '/api/trainings', ['title' => 'Formation', 'organization' => "/api/organizations/$organization"]);
+            $this->call('POST', '/api/formations', ['title' => 'Formation', 'organization' => "/api/organizations/$organization"]);
             self::assertResponseStatusCodeSame(201);
         }
-        $this->call('POST', '/api/trainings', ['title' => 'Formation hors périmètre', 'organization' => "/api/organizations/$outside"]);
+        $this->call('POST', '/api/formations', ['title' => 'Formation hors périmètre', 'organization' => "/api/organizations/$outside"]);
         self::assertResponseStatusCodeSame(400);
-        self::assertCount(2, $this->call('GET', '/api/trainings'));
+        self::assertCount(2, $this->call('GET', '/api/formations'));
 
         $this->call('GET', '/api/planning');
         self::assertResponseStatusCodeSame(403);
@@ -446,11 +481,11 @@ class ReferentialsTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
-    public function testTrainingTrainerTimeSlot(): void
+    public function testFormationTrainerTimeSlot(): void
     {
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $t = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation fictive', 'defaultCapacity' => 20]);
+        $t = $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => 'Formation fictive', 'defaultCapacity' => 20]);
         $this->assertResponseStatusCodeSame(201);
 
         $tr = $this->call('POST', '/api/trainers', ['firstName' => 'Jean', 'lastName' => 'Test', 'email' => 'j@example.test', 'organizations' => ["/api/organizations/$org"]]);
@@ -466,13 +501,13 @@ class ReferentialsTest extends WebTestCase
         $this->assertResponseStatusCodeSame(204);
         $this->assertCount(1, $this->call('GET', "/api/trainers/{$tr['id']}")['organizations']);
 
-        foreach (['trainings' => $t['id'], 'trainers' => $tr['id'], 'time-slots' => $slot['id']] as $resource => $id) {
+        foreach (['formations' => $t['id'], 'trainers' => $tr['id'], 'time-slots' => $slot['id']] as $resource => $id) {
             $this->call('DELETE', "/api/$resource/$id");
             $this->assertResponseStatusCodeSame(204);
             $this->assertNotContains($id, array_column($this->call('GET', "/api/$resource"), 'id'));
         }
         $db = $this->em()->getConnection();
-        $this->assertIsString($db->fetchOne('SELECT deleted_at FROM training WHERE id=? AND organization_id=?', [$t['id'], $org]));
+        $this->assertIsString($db->fetchOne('SELECT deleted_at FROM formation WHERE id=? AND organization_id=?', [$t['id'], $org]));
         $this->assertSame('DELETE', $db->fetchOne("SELECT action FROM audit_log WHERE entity='Organization' AND entity_id=? ORDER BY id DESC LIMIT 1", [$org]));
     }
 
@@ -514,7 +549,7 @@ class ReferentialsTest extends WebTestCase
     {
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $train = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation', 'defaultCapacity' => 20]);
+        $train = $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => 'Formation', 'defaultCapacity' => 20]);
         $mine = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'a@example.test']);
         $other = $this->call('POST', '/api/trainers', ['firstName' => 'C', 'lastName' => 'D', 'email' => 'c@example.test']);
 
@@ -525,7 +560,7 @@ class ReferentialsTest extends WebTestCase
         $this->assertResponseStatusCodeSame(201);
 
         $em = $this->em();
-        $t = $em->getRepository(\App\Entity\Training::class)->find($train['id']);
+        $t = $em->getRepository(\App\Entity\Formation::class)->find($train['id']);
         $slot = new \App\Entity\TimeSlot('Matin', '09:00', '13:00');
         $em->persist($slot);
         $future = new \App\Entity\VirtualClass($t, new \DateTimeImmutable('+3 days'));
@@ -717,26 +752,210 @@ class ReferentialsTest extends WebTestCase
         $this->assertSame(2, (int) $this->em()->getConnection()->fetchOne('SELECT count(*) FROM trainer_organization WHERE trainer_id = ?', [$id]));
     }
 
+    public function testFormationUsesSharedAudienceAndAdditionalOrganizations(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $other = $this->call('POST', '/api/organizations', ['name' => 'Organisme associé', 'code' => 'ASSOC', 'emailFrom' => 'assoc@example.test', 'siret' => '12345678901235'])['id'];
+        $audience = $this->call('POST', '/api/target-audiences', ['name' => 'Médecins']);
+        $this->assertResponseStatusCodeSame(422);
+        $created = $this->call('POST', '/api/target-audiences', ['name' => 'Médecins', 'acronym' => 'MED']);
+        $this->assertSame('MED', $created['acronym']);
+        $audience = $created['id'];
+        $formation = $this->call('POST', '/api/formations', [
+            'title' => 'Formation pilote',
+            'organization' => "/api/organizations/$org",
+            'additionalOrganizations' => ["/api/organizations/$other"],
+            'targetAudience' => "/api/target-audiences/$audience",
+            'customReference' => 'pilote-01',
+        ]);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame($other, $formation['additionalOrganizations'][0]['id']);
+        $this->assertSame('pilote-01', $formation['reference']);
+        $this->call('PATCH', "/api/target-audiences/$audience", ['name' => 'Médecins généralistes']);
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('Médecins généralistes', $this->call('GET', '/api/formations/'.$formation['id'])['audience']);
+        $url = '/api/formations/'.$formation['id'];
+        $this->call('PATCH', $url, ['customReference' => null]);
+        $this->assertSame('MED-formation-pilote', $this->call('GET', $url)['reference']);
+        $this->call('DELETE', "/api/target-audiences/$audience");
+        $this->assertResponseStatusCodeSame(409);
+    }
+
+    public function testFormationDraftCanBeCompletedAndPublished(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $draft = $this->call('POST', '/api/formations', ['title' => 'Formation pilote', 'organization' => "/api/organizations/$org"]);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame('draft', $draft['publicationStatus']);
+        $url = '/api/formations/'.$draft['id'];
+        $details = [
+            'orientation' => 'Prévention', 'description' => 'Description de test', 'objectives' => 'Objectifs de test',
+            'evaluation' => 'Observation', 'language' => 'Français', 'prerequisites' => 'Aucun',
+            'publicationStatus' => 'published', 'fundingTypes' => ['ANDPC'],
+            'andpcCodes' => [['year' => 2026, 'code' => 'A2026-001']],
+        ];
+        $this->call('PATCH', $url, $details);
+        $this->assertResponseIsSuccessful();
+        $result = $this->call('GET', $url);
+        foreach ($details as $key => $value) {
+            $this->assertEquals($value, $result[$key]);
+        }
+    }
+
+    public function testFormationDeletionRequiresNoSessionHistory(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $payload = ['organization' => "/api/organizations/$org", 'title' => 'Formation'];
+        $unused = $this->call('POST', '/api/formations', $payload)['id'];
+        $this->call('DELETE', "/api/formations/$unused");
+        $this->assertResponseStatusCodeSame(204);
+
+        $used = $this->call('POST', '/api/formations', $payload)['id'];
+        $em = $this->em();
+        $session = new \App\Entity\VirtualClass($em->find(\App\Entity\Formation::class, $used), new \DateTimeImmutable('-1 month'));
+        $session->markDeleted();
+        $em->persist($session);
+        $em->flush();
+        $this->call('DELETE', "/api/formations/$used");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('GET', "/api/formations/$used");
+        $this->assertResponseIsSuccessful();
+    }
+
     public function testUsedOrInactiveTimeSlotCannotBeDeletedOrBooked(): void
     {
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $training = $this->call('POST', '/api/trainings', ['organization' => "/api/organizations/$org", 'title' => 'Formation'])['id'];
+        $formation = $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => 'Formation'])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'a@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $slot = $this->call('POST', '/api/time-slots', ['label' => 'Soir', 'startTime' => '18:00', 'endTime' => '20:00']);
         $this->assertTrue($slot['active']);
         $this->call('PATCH', "/api/time-slots/{$slot['id']}", ['active' => false]);
-        $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03', 'trainingId' => $training, 'dpcAction' => 'A', 'dpcSession' => 'S', 'slots' => [['timeSlotId' => $slot['id'], 'trainerId' => $trainer]]]);
+        $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03', 'formationId' => $formation, 'dpcAction' => 'A', 'dpcSession' => 'S', 'slots' => [['timeSlotId' => $slot['id'], 'trainerId' => $trainer]]]);
         $this->assertResponseStatusCodeSame(422);
         $this->assertSame([], $this->call('GET', '/api/time-slot-usage'));
 
         $em = $this->em();
-        $class = new \App\Entity\VirtualClass($em->getRepository(\App\Entity\Training::class)->find($training), new \DateTimeImmutable('+3 days'));
+        $class = new \App\Entity\VirtualClass($em->getRepository(\App\Entity\Formation::class)->find($formation), new \DateTimeImmutable('+3 days'));
         $em->persist($class);
         $em->persist(new \App\Entity\ClassSlot($class, $em->getRepository(\App\Entity\TimeSlot::class)->find($slot['id']), $em->getRepository(\App\Entity\Trainer::class)->find($trainer)));
         $em->flush();
         $this->assertSame([$slot['id']], $this->call('GET', '/api/time-slot-usage'));
         $this->call('DELETE', "/api/time-slots/{$slot['id']}");
         $this->assertResponseStatusCodeSame(409);
+    }
+
+    public function testUserDeletionIsLogicalAndClosesTheAccount(): void
+    {
+        $owner = $this->loginAs('SUPER_ADMIN', 'owner@example.test')->getId();
+        $id = $this->call('POST', '/api/users', ['email' => 'gone@example.test', 'name' => 'Gone', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long'])['id'];
+        $this->call('DELETE', "/api/users/$owner");
+        $this->assertResponseStatusCodeSame(403);
+        $this->call('DELETE', "/api/users/$id");
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertNotContains($id, array_column($this->call('GET', '/api/users'), 'id'));
+        $this->call('GET', "/api/users/$id");
+        $this->assertResponseStatusCodeSame(404);
+        $db = $this->em()->getConnection();
+        $row = $db->fetchAssociative('SELECT active, deleted_at FROM "user" WHERE id = ?', [$id]);
+        $this->assertFalse($row['active']);
+        $this->assertNotNull($row['deleted_at']);
+        $this->assertSame('DELETE', $db->fetchOne("SELECT action FROM audit_log WHERE entity = 'User' AND entity_id = ? ORDER BY id DESC LIMIT 1", [$id]));
+        $this->assertFalse($this->em()->getRepository(User::class)->find($id)->canLogin());
+
+        $this->call('POST', '/api/users', ['email' => 'gone@example.test', 'name' => 'Again', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->assertResponseStatusCodeSame(422);
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'G', 'lastName' => 'One', 'email' => 'gone@example.test'])['id'];
+        $this->call('POST', "/api/trainers/$trainer/access");
+        $this->assertResponseStatusCodeSame(409);
+
+        $this->loginAs('ADMIN');
+        $this->call('DELETE', "/api/users/$owner");
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testArchivedConfigurationKeepsItsDeletionDate(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account, virtual_class_config CASCADE');
+        $this->loginAs('SUPER_ADMIN');
+        $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte', 'profile' => 'DEMO', 'hostUserId' => 'archive'])['id'];
+        $config = ['name' => 'Politique', 'hosts' => [$host], 'organizations' => [],
+            'policy' => ['waitingRoom' => false, 'passcode' => true, 'joinBeforeHost' => true, 'recording' => 'none']];
+        $this->call('POST', '/api/virtual-class-configs', $config);
+        $this->assertResponseIsSuccessful();
+        $db = $this->em()->getConnection();
+        $id = (int) $db->fetchOne('SELECT id FROM virtual_class_config');
+        $this->assertNull($db->fetchOne('SELECT deleted_at FROM virtual_class_config'));
+        foreach ([true, false] as $archived) {
+            $this->call('POST', '/api/virtual-class-configs', ['id' => $id, 'archived' => $archived] + $config);
+            $this->assertResponseIsSuccessful();
+            $this->assertSame($archived ? 1 : 0, (int) $db->fetchOne('SELECT count(*) FROM virtual_class_config WHERE deleted_at IS NOT NULL'));
+        }
+    }
+
+    public function testCustomRoleIsDeletedOnlyWhenNobodyHasIt(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE custom_role CASCADE');
+        $this->loginAs('SUPER_ADMIN', 'owner@example.test');
+        $org = $this->org();
+        $role = $this->call('POST', '/api/custom-roles', ['name' => 'Coordination', 'permissions' => ['PLANNING']])['id'];
+        $user = $this->call('POST', '/api/users', ['email' => 'c@example.test', 'name' => 'C', 'role' => 'ROLE_LECTURE', 'customRoleId' => $role, 'organizations' => ["/api/organizations/$org"], 'plainPassword' => 'un-mot-de-passe-long'])['id'];
+        $usage = $this->call('GET', '/api/custom-roles')['usage'];
+        $this->assertSame([1, 1], [$usage["custom:$role"], $usage['ROLE_SUPER_ADMIN']]);
+        $this->assertStringContainsString('1 personne', $this->call('DELETE', "/api/custom-roles/$role")['detail']);
+        $this->assertResponseStatusCodeSame(409);
+
+        $this->call('DELETE', "/api/users/$user");
+        $this->call('DELETE', "/api/custom-roles/$role");
+        $this->assertResponseStatusCodeSame(204);
+        $this->assertSame([], $this->call('GET', '/api/custom-roles')['roles']);
+        $this->assertNotNull($this->em()->getConnection()->fetchOne('SELECT deleted_at FROM custom_role WHERE id = ?', [$role]));
+        $this->call('POST', '/api/users', ['email' => 'd@example.test', 'name' => 'D', 'role' => 'ROLE_LECTURE', 'customRoleId' => $role, 'organizations' => ["/api/organizations/$org"], 'plainPassword' => 'un-mot-de-passe-long']);
+        $this->assertResponseStatusCodeSame(422);
+        $this->loginAs('ADMIN');
+        $this->call('DELETE', "/api/custom-roles/$role");
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testDeletedRecordsAreListedForAdminsWithinTheirScope(): void
+    {
+        $this->em()->getConnection()->executeStatement('TRUNCATE custom_role CASCADE');
+        $this->loginAs('SUPER_ADMIN', 'owner@example.test');
+        $org = $this->org();
+        $ids = [
+            'organizations' => $this->call('POST', '/api/organizations', ['name' => 'Ancien', 'code' => 'ANCIEN', 'emailFrom' => 'a@example.test'])['id'],
+            'formations' => $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => 'Ancienne'])['id'],
+            'trainers' => $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 't@example.test', 'organizations' => ["/api/organizations/$org"]])['id'],
+            'time-slots' => $this->call('POST', '/api/time-slots', ['label' => 'Soir', 'startTime' => '18:00', 'endTime' => '20:00'])['id'],
+            'users' => $this->call('POST', '/api/users', ['email' => 'u@example.test', 'name' => 'U', 'role' => 'ROLE_SUIVI', 'plainPassword' => 'un-mot-de-passe-long'])['id'],
+        ];
+        foreach ($ids as $resource => $id) {
+            $this->call('DELETE', "/api/$resource/$id");
+            $this->assertResponseStatusCodeSame(204);
+            $deleted = $this->call('GET', "/api/$resource?deleted=1");
+            $this->assertSame([$id], array_column($deleted, 'id'), $resource);
+            $this->assertNotEmpty(current($deleted)['deletedAt'] ?? null, $resource);
+            $this->assertNotContains($id, array_column($this->call('GET', "/api/$resource"), 'id'));
+        }
+        $role = $this->call('POST', '/api/custom-roles', ['name' => 'Ancien', 'permissions' => ['PLANNING']])['id'];
+        $this->call('DELETE', "/api/custom-roles/$role");
+        $this->assertSame([$role], array_column($this->call('GET', '/api/custom-roles?deleted=1')['roles'], 'id'));
+
+        $admin = $this->loginAs('ADMIN');
+        $this->assertSame([], $this->call('GET', '/api/formations?deleted=1')); // no organization yet
+        $this->assertResponseIsSuccessful();
+        $admin = $this->em()->getRepository(User::class)->find($admin->getId());
+        // A reference: the scope filter of the previous request would hide the organization from find().
+        $admin->addOrganization($this->em()->getReference(\App\Entity\Organization::class, $org));
+        $this->em()->flush();
+        $this->client->loginUser($admin);
+        $this->assertSame([$ids['formations']], array_column($this->call('GET', '/api/formations?deleted=1'), 'id'));
+
+        $this->loginAs('SUIVI');
+        $this->call('GET', '/api/formations?deleted=1');
+        $this->assertResponseStatusCodeSame(403);
     }
 }

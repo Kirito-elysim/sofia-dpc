@@ -1,6 +1,6 @@
 Bonjour {{ ps.firstName }} {{ ps.lastName|upper }},
 
-{% if manual %}Rappel de votre classe virtuelle « {{ class.training.title }} ».{% else %}Votre inscription à la classe virtuelle « {{ class.training.title }} » est confirmée.{% endif %}
+{% if manual %}Rappel de votre classe virtuelle « {{ class.formation.title }} ».{% else %}Votre inscription à la classe virtuelle « {{ class.formation.title }} » est confirmée.{% endif %}
 
 Date : {{ class.date|date('d/m/Y') }}
 Organisme : {{ org.name }}

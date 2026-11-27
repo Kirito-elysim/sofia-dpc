@@ -42,8 +42,8 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       <div className="page-heading"><Video/>
-        <h1 className="text-2xl font-bold">{c.training.title}</h1>
-        <OrganizationBadge {...c.training.organization} />
+        <h1 className="text-2xl font-bold">{c.formation.title}</h1>
+        <OrganizationBadge {...c.formation.organization} />
         <StatusBadge status={c.status} />
         <span className="ml-auto text-sm">{c.enrolledCount} / {c.capacity} places apprenants occupées</span>
       </div>

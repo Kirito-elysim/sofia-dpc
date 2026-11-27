@@ -6,6 +6,7 @@ use App\Entity\AuditLog;
 use App\Entity\MessageLog;
 use App\Entity\SoftDeletable;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Events;
@@ -18,7 +19,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 #[AsDoctrineListener(event: Events::postFlush)]
 final class AuditListener
 {
-    private const SKIP_FIELDS = ['password', 'plainPassword', 'profilePhoto'];
+    private const SKIP_FIELDS = ['password', 'plainPassword'];
 
     /** @var list<array{string, object, ?int, array<string, mixed>}> */
     private array $pending = [];
@@ -30,18 +31,43 @@ final class AuditListener
 
     public function onFlush(OnFlushEventArgs $args): void
     {
+        if ($this->writing) {
+            return; // the nested flush only writes audit rows
+        }
         $uow = $args->getObjectManager()->getUnitOfWork();
+        $changes = [];
         foreach ($uow->getScheduledEntityInsertions() as $e) {
-            $this->audited($e) && $this->pending[] = ['CREATE', $e, null, $this->diff($uow->getEntityChangeSet($e), true)];
+            $changes[spl_object_id($e)] = ['CREATE', $e, null, $this->diff($uow->getEntityChangeSet($e), true)];
         }
         foreach ($uow->getScheduledEntityUpdates() as $e) {
-            if ($this->audited($e) && $diff = $this->diff($uow->getEntityChangeSet($e), false)) {
-                $action = $e instanceof SoftDeletable && isset($diff['deletedAt']) ? 'DELETE' : 'UPDATE';
-                $this->pending[] = [$action, $e, null, $diff];
+            if ($diff = $this->diff($uow->getEntityChangeSet($e), false)) {
+                $deleted = $e instanceof SoftDeletable && isset($diff['deletedAt'][1]);
+                $action = match (true) {
+                    $deleted => 'DELETE',
+                    'archived' === ($diff['publicationStatus'][1] ?? null) || true === ($diff['archived'][1] ?? null) => 'ARCHIVE',
+                    default => 'UPDATE',
+                };
+                // A deletion keeps what the record contained.
+                $changes[spl_object_id($e)] = [$action, $e, null, $deleted ? $diff + $this->snapshot($uow->getOriginalEntityData($e)) : $diff];
             }
         }
+        // Many-to-many links are not part of the change sets.
+        foreach ([...$uow->getScheduledCollectionUpdates(), ...$uow->getScheduledCollectionDeletions()] as $collection) {
+            $owner = $collection->getOwner();
+            if (null === $owner || $uow->isScheduledForDelete($owner)) {
+                continue;
+            }
+            $key = spl_object_id($owner);
+            $changes[$key] ??= ['UPDATE', $owner, null, []];
+            $new = array_values(array_map($this->scalar(...), $collection->toArray()));
+            $old = array_values(array_map($this->scalar(...), $collection->getSnapshot()));
+            $changes[$key][3][$collection->getMapping()->fieldName] = 'CREATE' === $changes[$key][0] ? $new : [$old, $new];
+        }
         foreach ($uow->getScheduledEntityDeletions() as $e) {
-            $this->audited($e) && $this->pending[] = ['DELETE', $e, $uow->getEntityIdentifier($e)['id'] ?? null, []];
+            $changes[spl_object_id($e)] = ['DELETE', $e, $uow->getEntityIdentifier($e)['id'] ?? null, $this->snapshot($uow->getOriginalEntityData($e))];
+        }
+        foreach ($changes as $change) {
+            $this->audited($change[1]) && $this->pending[] = $change;
         }
     }
 
@@ -56,8 +82,8 @@ final class AuditListener
         $this->writing = true; // the nested flush below re-enters this listener
         try {
             foreach ($this->pending as [$action, $entity, $id, $data]) {
-                $id ??= method_exists($entity, 'getId') ? $entity->getId() : null;
-                $em->persist(new AuditLog($user, $action, (new \ReflectionClass($entity))->getShortName(), $id, $data, $ip));
+                $id ??= method_exists($entity, 'getId') ? $entity->getId() : ($entity->id ?? null);
+                $em->persist(new AuditLog($user, $action, $em->getClassMetadata($entity::class)->getReflectionClass()->getShortName(), $id, $data, $ip, $this->label($entity)));
             }
             $this->pending = [];
             $em->flush();
@@ -83,10 +109,40 @@ final class AuditListener
             if (in_array($field, self::SKIP_FIELDS, true)) {
                 continue;
             }
+            if ('thumbnail' === $field || 'profilePhoto' === $field) {
+                $out[$field] = $creating ? (null === $new ? null : 'Image ajoutée') : [null === $old ? null : 'Ancienne image', null === $new ? null : 'Nouvelle image'];
+                continue;
+            }
+            if (AuditPayload::sensitive($field)) {
+                $out[$field] = $creating ? '[masqué]' : ['[masqué]', '[masqué]'];
+                continue;
+            }
             $out[$field] = $creating ? $this->scalar($new) : [$this->scalar($old), $this->scalar($new)];
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string, mixed> $original
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshot(array $original): array
+    {
+        unset($original['id'], $original['deletedAt']);
+        $original = array_filter($original, static fn (mixed $v): bool => !$v instanceof Collection);
+
+        return $this->diff(array_map(static fn (mixed $v): array => [$v, null], $original), false);
+    }
+
+    private function label(object $e): ?string
+    {
+        $values = get_object_vars($e); // public properties only, which is where the names live
+        $label = $values['name'] ?? $values['title'] ?? $values['label'] ?? null;
+        $label ??= trim(($values['firstName'] ?? '').' '.($values['lastName'] ?? '')) ?: ($values['email'] ?? null);
+
+        return is_string($label) ? mb_substr($label, 0, 255) : null;
     }
 
     private function scalar(mixed $v): mixed
@@ -94,8 +150,8 @@ final class AuditListener
         return match (true) {
             $v instanceof \BackedEnum => $v->value,
             $v instanceof \DateTimeInterface => $v->format(DATE_ATOM),
-            is_object($v) => method_exists($v, 'getId') ? ['id' => $v->getId()] : null,
-            default => $v,
+            is_object($v) => method_exists($v, 'getId') || isset($v->id) ? array_filter(['id' => method_exists($v, 'getId') ? $v->getId() : $v->id, 'label' => $this->label($v)]) : null,
+            default => AuditPayload::clean($v),
         };
     }
 }

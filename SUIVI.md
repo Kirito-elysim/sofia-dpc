@@ -68,3 +68,16 @@ Logs Zoom automatiques, documents DPC, facturation, Zoho CRM/Sign, analytique : 
 - [x] Se connecter en tant que, depuis Utilisateurs et Formateurs (2026-11-25)
 - [x] Page formateur selon la maquette, plusieurs organismes, documents ; habilitation par formation retirée (2026-11-25)
 - [x] Page Créneaux selon la maquette, statut actif et protection des créneaux utilisés (2026-11-25)
+
+- 2026-11-27 — Liste des formations intégrée avec financements multiples, public et codes ANDPC. La saisie des codes dans la fiche formation reste à réaliser.
+- 2026-11-27 — Téléversement d’une vignette depuis la fiche formation et affichage à gauche du titre dans le catalogue.
+- 2026-11-27 — Modalité modifiable depuis la fiche formation et visible dans le catalogue, avec vignette carrée à gauche du titre.
+- 2026-11-27 — Cartes du catalogue avant les filtres et statut de publication modifiable et filtrable.
+- 2026-11-27 — Cartes du catalogue cliquables pour filtrer par statut ou retrouver toutes les formations.
+- 2026-11-27 — Référence automatique des formations à partir du public et du titre.
+- 2026-11-27 — Suppression d’une formation bloquée dès sa première session, inscriptions comprises.
+- 2026-11-27 — Création de formation en cinq étapes, aperçu, brouillons reprenables, financements et publication dans le catalogue.
+- 2026-11-27 — Bouton « Créer une formation » placé dans l’en-tête du catalogue et navigation testée.
+- 2026-11-27 — Orientation, description et objectifs regroupés dans l’étape Programme.
+- 2026-11-27 — Parcours de création ramené à quatre étapes et écran de validation avec résumé modifiable et progression.
+- 2026-11-27 — Fiche de modification en trois onglets avec aperçu, duplication, archivage et pilotage des sessions.

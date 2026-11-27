@@ -36,7 +36,7 @@ class MyClassesController extends AbstractController
                 ? 'https://zoom.us/j/'.$s->meetingNumber : null,
             'classId' => $s->virtualClass->getId(),
             'date' => $s->virtualClass->date->format('Y-m-d'),
-            'training' => $s->virtualClass->training->title,
+            'formation' => $s->virtualClass->formation->title,
             'organization' => $s->virtualClass->getOrganization()->code,
             'status' => $s->virtualClass->status->value,
             'slot' => $s->timeSlot->label,

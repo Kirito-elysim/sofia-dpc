@@ -16,10 +16,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-// No DELETE: users are deactivated so the audit trail keeps pointing at a real account.
+// DELETE is logical (deleted_at): the audit trail keeps pointing at a real account, and the e-mail stays reserved.
 #[ORM\Entity]
 #[ORM\Table(name: '"user"')]
-#[UniqueEntity('email')]
+#[UniqueEntity('email', message: 'Cette adresse est déjà utilisée, y compris par un compte supprimé.')]
 #[UniqueEntity('trainer', message: 'Ce formateur a déjà un compte.')]
 #[ApiResource(
     operations: [
@@ -27,12 +27,13 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         new Get(normalizationContext: ['groups' => ['user:read', 'user:item']]),
         new Post(validationContext: ['groups' => ['Default', 'create']], processor: UserProcessor::class),
         new Patch(processor: UserProcessor::class),
+        new \ApiPlatform\Metadata\Delete(security: "is_granted('ROLE_SUPER_ADMIN') and object.getUserIdentifier() != user.getUserIdentifier()", processor: \App\State\SoftDeleteProcessor::class),
     ],
     security: "is_granted('ROLE_SUPER_ADMIN')",
     normalizationContext: ['groups' => ['user:read']],
     denormalizationContext: ['groups' => ['user:write']],
 )]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User extends SoftDeletable implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const ROLES = ['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_SUIVI', 'ROLE_LECTURE', 'ROLE_FORMATEUR'];
 
@@ -156,6 +157,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function canLogin(): bool
     {
         return $this->active && ('ROLE_FORMATEUR' !== $this->getRole() || $this->hasTrainerAccess());
+    }
+
+    /** A deleted account cannot sign in any more and frees its trainer sheet. */
+    public function markDeleted(): void
+    {
+        parent::markDeleted();
+        $this->active = false;
+        $this->trainer = null;
     }
 
     public function getUserIdentifier(): string

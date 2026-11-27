@@ -17,7 +17,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
 // Slots, trainers and Zoom accounts (ClassSlot) come in the next task.
 #[ORM\Entity]
 #[ApiResource(operations: [new GetCollection(), new Get()], security: "is_granted('SOFIA_CLASSES')", normalizationContext: ['groups' => ['read']], order: ['date' => 'ASC'])]
-class VirtualClass
+class VirtualClass extends SoftDeletable
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
@@ -42,7 +42,7 @@ class VirtualClass
     public ?string $scheduleFingerprint = null;
 
     public function __construct(
-        #[ORM\ManyToOne, Groups('read')] public Training $training,
+        #[ORM\ManyToOne, Groups('read')] public Formation $formation,
         #[ORM\Column(type: 'date_immutable'), Groups('read')] public \DateTimeImmutable $date,
         #[ORM\Column, Groups('read')] public int $capacity = 20,
         #[ORM\Column(enumType: ClassStatus::class), Groups('read')] public ClassStatus $status = ClassStatus::PLANNED,
@@ -58,7 +58,7 @@ class VirtualClass
 
     public function getOrganization(): Organization
     {
-        return $this->training->organization;
+        return $this->formation->organization;
     }
 
     #[Groups('read')]
