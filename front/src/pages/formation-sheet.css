@@ -10,3 +10,4 @@
 .ts-quick {display:grid;gap:8px}.ts-quick button {justify-content:start}.ts aside dl>div {display:flex;justify-content:space-between;gap:10px}.ts a {color:#245397}
 .ts-preview {margin:auto;padding:24px;border:1px solid #dbe2ed;border-radius:12px;width:min(560px,94vw);max-height:85vh;overflow:auto}.ts-preview::backdrop {background:#15243a70}.ts-preview img {max-height:160px}.ts-preview dd {white-space:pre-wrap}
 @media print {body:has(.ts-preview[open]) * {visibility:hidden}body:has(.ts-preview[open]) .ts-preview,body:has(.ts-preview[open]) .ts-preview * {visibility:visible}.ts-preview[open] {position:absolute;inset:0 auto auto 0;width:100%;max-height:none;border:0;overflow:visible}.ts-preview button {display:none}}
+.ts .ts-resources {margin-top:16px}

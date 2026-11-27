@@ -16,7 +16,7 @@ class ReferentialsTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = static::createClient();
-        $this->em()->getConnection()->executeStatement('TRUNCATE registration, session_formation, session, audit_log, enrollment, trainer, time_slot, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
+        $this->em()->getConnection()->executeStatement('TRUNCATE portal_link, learning_resource, registration, session_formation, session, audit_log, enrollment, trainer, time_slot, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
     }
 
     private function em(): EntityManagerInterface
@@ -1106,5 +1106,69 @@ class ReferentialsTest extends WebTestCase
         $this->em()->flush();
         $this->call('POST', $url, $ps);
         $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testLearnerSignsInByLinkAndOnlyReachesOpenFormations(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $formation = $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => 'Ouverte'])['id'];
+        $link = $this->sessionFormation($org, $formation);
+        $today = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('Y-m-d');
+        $this->call('POST', "/api/formations/$formation/resources", []);
+        $this->assertResponseStatusCodeSame(422);
+        $pdf = tempnam(sys_get_temp_dir(), 'res');
+        file_put_contents($pdf, "%PDF-1.4\n%fixture\n");
+        $this->client->request('POST', "/api/formations/$formation/resources", ['title' => 'Support'], ['file' => new \Symfony\Component\HttpFoundation\File\UploadedFile($pdf, 'support.pdf', 'application/pdf', null, true)]);
+        $this->assertResponseStatusCodeSame(201);
+        $file = json_decode($this->client->getResponse()->getContent(), true)['id'];
+        $this->client->request('POST', "/api/session-formations/$link/resources", ['title' => 'Replay', 'url' => 'javascript:alert(1)']);
+        $this->assertResponseStatusCodeSame(422);
+        $this->client->request('POST', "/api/session-formations/$link/resources", ['title' => 'Replay', 'url' => 'https://example.test/replay']);
+        $this->assertResponseStatusCodeSame(201);
+        // Access starts in 2030: nothing is open yet.
+        $registration = $this->call('POST', "/api/session-formations/$link/registrations", ['firstName' => 'Paul', 'lastName' => 'Test', 'email' => 'portal@example.test'])['id'];
+
+        $this->client->getCookieJar()->clear();
+        $this->client->restart();
+        $this->call('GET', '/api/portal/me');
+        $this->assertResponseStatusCodeSame(401);
+        $ask = function (string $email): void {
+            $this->call('POST', '/api/portal/links', ['email' => $email]);
+            $this->assertResponseStatusCodeSame(204);
+        };
+        $ask('unknown@example.test');
+        $queue = static fn () => static::getContainer()->get('messenger.transport.async')->getSent();
+        $this->assertCount(0, $queue());
+        $ask('PORTAL@example.test');
+        $this->assertCount(1, $queue());
+        $handler = static::getContainer()->get(\App\Message\SendPortalLinkHandler::class);
+        $handler($queue()[0]->getMessage());
+        $mail = $this->getMailerMessage();
+        $this->assertInstanceOf(\Symfony\Component\Mime\Email::class, $mail);
+        $this->assertSame(1, preg_match('~/espace#token=([0-9a-f]{64})~', (string) $mail->getTextBody(), $match));
+        $this->assertSame(0, (int) $this->em()->getConnection()->fetchOne('SELECT count(*) FROM portal_link WHERE token_hash = ?', [$match[1]]));
+        $this->call('POST', '/api/portal/session', ['token' => str_repeat('0', 64)]);
+        $this->assertResponseStatusCodeSame(422);
+        $this->call('POST', '/api/portal/session', ['token' => $match[1]]);
+        $this->assertResponseStatusCodeSame(204);
+        $me = $this->call('GET', '/api/portal/me');
+        $this->assertSame([false, [], []], [$me['formations'][0]['open'], $me['formations'][0]['resources'], $me['formations'][0]['classes']]);
+        $this->call('GET', "/api/portal/resources/$file/file");
+        $this->assertResponseStatusCodeSame(404);
+        // A learner session opens nothing of the team's application.
+        $this->call('GET', '/api/formations');
+        $this->assertResponseStatusCodeSame(401);
+        $this->em()->getConnection()->executeStatement('UPDATE registration SET access_starts_on = ? WHERE id = ?', [$today, $registration]);
+        $me = $this->call('GET', '/api/portal/me');
+        $this->assertSame(['Support', 'Replay'], array_column($me['formations'][0]['resources'], 'title'));
+        $this->client->request('GET', "/api/portal/resources/$file/file");
+        $this->assertResponseIsSuccessful();
+        $this->assertStringStartsWith('%PDF', (string) $this->client->getResponse()->getContent());
+        $this->call('DELETE', '/api/portal/session');
+        $this->call('GET', '/api/portal/me');
+        $this->assertResponseStatusCodeSame(401);
+        $this->call('POST', '/api/portal/session', ['token' => $match[1]]);
+        $this->assertResponseStatusCodeSame(422); // single use
     }
 }

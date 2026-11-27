@@ -2,7 +2,7 @@
 export const resources:Record<string,string>={
   Organization:'Organisme',Formation:'Formation',TargetAudience:'Public cible',Trainer:'Formateur',TimeSlot:'Créneau',User:'Utilisateur',
   VirtualClass:'Classe virtuelle',ClassSlot:'Créneau de classe',Participant:'Participant (PS)',Enrollment:'Inscription',ZoomAccount:'Compte Zoom',
-  MessageTemplate:'Modèle de message',Session:'Session',SessionFormation:'Session-formation',Registration:'Inscription à une session',registrations:'Inscription à une session',sessions:'Session','session-formations':'Session-formation',CustomRole:'Rôle',
+  MessageTemplate:'Modèle de message',Session:'Session',SessionFormation:'Session-formation',Registration:'Inscription à une session',registrations:'Inscription à une session',LearningResource:'Ressource',resources:'Ressource',PortalLink:'Lien de connexion PS',portal:'Espace apprenant',sessions:'Session','session-formations':'Session-formation',CustomRole:'Rôle',
   // Rows written before « Training » became « Formation » (the audit trail is never rewritten).
   Training:'Formation',trainings:'Formation',
   organizations:'Organisme',formations:'Formation','target-audiences':'Public cible',trainers:'Formateur','time-slots':'Créneau',users:'Utilisateur',
@@ -12,7 +12,7 @@ export const resources:Record<string,string>={
 }
 export const actions:Record<string,string>={
   CREATE:'Création',UPDATE:'Modification',DELETE:'Suppression',ARCHIVE:'Archivage',REQUEST_FAILED:'Action refusée',
-  LOGIN_SUCCESS:'Connexion',LOGIN_FAILURE:'Échec de connexion',LOGOUT:'Déconnexion',MANUAL_REMINDER:'Relance manuelle',ZOOM_PROVISION:'Configuration Zoom',
+  LOGIN_SUCCESS:'Connexion',PORTAL_LOGIN:'Connexion à l’espace apprenant',LOGIN_FAILURE:'Échec de connexion',LOGOUT:'Déconnexion',MANUAL_REMINDER:'Relance manuelle',ZOOM_PROVISION:'Configuration Zoom',
   ACCESS_SENT:'Envoi des accès',IMPERSONATION_START:'Début de prise de compte',IMPERSONATION_STOP:'Fin de prise de compte',LIVE_CONTACT:'Contact en direct',
   TRAINER_DOCUMENT_SAVED:'Document formateur enregistré',TRAINER_DOCUMENT_DELETED:'Document formateur supprimé',
 }

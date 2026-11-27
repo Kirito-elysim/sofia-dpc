@@ -13,3 +13,4 @@
 .ss-presence {display:grid;gap:4px;margin:0;padding:4px 0;list-style:none}.ss-presence li {padding:2px 8px;border-radius:10px;background:#eef1f5;font-size:12px}.ss-presence li.seen {background:#e4f8e9;color:#087d33}.ss-presence li.absent {background:#ffe8e8;color:#a51837}.ss-presence a {font-weight:600;color:inherit}
 .ss-actions {display:flex;gap:10px}
 .tw.ss-entry {min-height:0;padding-bottom:0}.ls-page.ss-entry-list {padding-inline:clamp(12px,2vw,28px)}
+.ss-classes>summary {margin-bottom:10px;font-weight:700;cursor:pointer}

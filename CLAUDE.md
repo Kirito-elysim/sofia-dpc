@@ -20,6 +20,8 @@ analytique) ne doit PAS être développée : seulement visible dans le menu avec
 - 3 comptes Zoom ; un compte = une seule réunion à la fois. Allocation automatique d'un compte libre par créneau ;
   si aucun compte libre → création bloquée + message + mail à l'admin.
 - Capacité par défaut 20 PS (paramétrable par formation).
+- Espace apprenant (`/espace`) : le PS se connecte par un lien e-mail à usage unique ; il n'est pas un `User` et sa
+  session n'ouvre que `/api/portal/`.
 - Rôles : SUPER_ADMIN, ADMIN, SUIVI, LECTURE.
 - Relances : mail J-3, J-1, jour J ; SMS + mail à T-5 min aux non-connectés ; SMS + mail à +3 min et +8 min
   après une déconnexion ; alerte dashboard (visuelle + sonore) à +10 min.

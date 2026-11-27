@@ -9,6 +9,7 @@ framework:
         routing:
             App\Message\SendEnrollmentConfirmation: async
             App\Message\ZoomCapacityAlert: async
+            App\Message\SendPortalLink: async
 
 when@test:
     framework:

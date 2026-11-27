@@ -73,4 +73,4 @@ L'écran affiche toujours la date retenue et sa provenance (« héritée de la s
 - [x] 1. Sessions et session-formations (liste, création, fiche).
 - [x] 2. Classes virtuelles dans les session-formations (une classe ne réunit que des sessions du même organisme).
 - [x] 3. Inscriptions, accès et présence.
-- [ ] 4. Ressources et espace apprenant. À définir avant : mode de connexion du PS.
+- [x] 4. Ressources et espace apprenant. Connexion par lien reçu par e-mail (choix de l’utilisateur).

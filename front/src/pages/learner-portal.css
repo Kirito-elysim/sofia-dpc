@@ -1,0 +1,12 @@
+.lp {min-height:100vh;background:#f8fafc;color:#1e2347;font:15px/1.4 var(--font-sans)}
+.lp>header {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:#0a2552}.lp>header img {width:170px;height:auto}
+.lp button,.lp .lp-join {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 16px;border:0;border-radius:8px;background:#1557f5;color:#fff;font:inherit;font-weight:600;cursor:pointer}.lp button:disabled {opacity:.5}
+.lp>header button {background:#ffffff1f}.lp svg {width:17px;height:17px;flex:none}
+.lp main {display:grid;gap:16px;max-width:760px;margin:0 auto;padding:24px 16px}
+.lp h1 {margin:0;font-size:26px;font-weight:700}.lp h2 {margin:0;font-size:20px;font-weight:700}.lp h3 {display:flex;align-items:center;gap:8px;margin:18px 0 8px;font-size:16px;font-weight:700}
+.lp article {padding:20px;border:1px solid #d9e3f1;border-radius:12px;background:#fff;box-shadow:0 2px 8px #1836620f}
+.lp p {margin:0}.lp .lp-meta {color:#46658f}.lp-access {display:inline-flex;align-items:center;gap:8px;margin-top:10px!important;padding:5px 12px;border-radius:16px;background:#eef1f5;color:#475569;font-size:13px;font-weight:600}.lp-access.open {background:#e4f8e9;color:#087d33}
+.lp ul {display:grid;gap:8px;margin:0;padding:0;list-style:none}.lp li {display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e6ecf5;border-radius:8px}.lp li>span {flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.lp li a {display:inline-flex;align-items:center;gap:6px;color:#0048ee;font-weight:600}.lp li .lp-join {color:#fff;min-height:34px;padding:5px 14px}.lp small {color:#46658f}
+.lp-ask {display:grid;gap:14px;margin-top:24px}.lp-ask form {display:grid;gap:12px}.lp-ask label {display:block;font-weight:600}.lp-ask input {display:block;box-sizing:border-box;width:100%;min-height:42px;margin-top:6px;padding:8px 12px;border:1px solid #bdc9dc;border-radius:8px;font:inherit}
+.lp .lp-sent {padding:12px;border-radius:8px;background:#e4f8e9;color:#087d33}.lp .lp-alert {padding:12px;border-radius:8px;background:#ffe8e8;color:#a51837}

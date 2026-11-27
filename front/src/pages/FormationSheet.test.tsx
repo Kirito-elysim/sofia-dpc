@@ -11,7 +11,7 @@ test('conserve la saisie pendant la consultation des sessions et enregistre le c
   const org={id:4,name:'SOFIA',active:true}
   const record={id:8,title:'Formation initiale',organization:org,publicationStatus:'archived',active:true,defaultCapacity:20,fundingTypes:[],andpcCodes:[]}
   vi.mocked(api).mockImplementation(async(path,init)=>{
-    if(path==='/target-audiences')return []
+    if(path==='/target-audiences'||path.endsWith('/resources'))return []
     if(path==='/organizations')return [org]
     if(path==='/virtual-classes')return [{id:3,formation:{id:8},date:'2026-11-27',reference:'Session A',capacity:20,enrolledCount:2,status:'PLANNED'},{id:5,formation:{id:9},reference:'Autre session'}]
     return {...record,...JSON.parse(String(init?.body??'{}'))}
@@ -50,7 +50,7 @@ test('saisit la durée en heures et retire les financements d’un organisme enl
   const sofia={id:4,name:'SOFIA',active:true},studio={id:5,name:'Studio',active:true}
   const record={id:8,title:'Publiée',organization:sofia,additionalOrganizations:[studio],publicationStatus:'published',active:true,defaultCapacity:20,totalDurationMin:470,fundingTypes:['FIFPL'],andpcCodes:[],fifplCodes:[{organization:4,year:2026,code:'F-1'},{organization:5,year:2026,code:'F-2'}],personalPrices:[]}
   vi.mocked(api).mockClear()
-  vi.mocked(api).mockImplementation(async(path,init)=>path==='/organizations'?[sofia,studio]:path==='/target-audiences'?[]:init?.method==='PATCH'?{...record,...JSON.parse(String(init.body)),organization:sofia,additionalOrganizations:[]}:record)
+  vi.mocked(api).mockImplementation(async(path,init)=>path==='/organizations'?[sofia,studio]:path==='/target-audiences'||path.endsWith('/resources')?[]:init?.method==='PATCH'?{...record,...JSON.parse(String(init.body)),organization:sofia,additionalOrganizations:[]}:record)
   const view=render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/settings/formations/8/edit']}><Routes><Route path="/settings/formations/:id/edit" element={<FormationSheet canReadClasses={false} canSchedule={false}/>}/></Routes></MemoryRouter></QueryClientProvider>)
   expect((await view.findByLabelText('Heures') as HTMLInputElement).value).toBe('7')
   fireEvent.change(view.getByLabelText('Heures'),{target:{value:'8'}})

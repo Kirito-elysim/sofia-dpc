@@ -5,4 +5,5 @@
   <li>Organisme : {{ org.name }}</li>
 </ul>
 <p>Vous recevrez votre lien de connexion personnel avant la classe, ainsi que des rappels.</p>
+{% if portal %}<p><a href="{{ portal }}">Accéder à vos classes et à vos ressources</a></p>{% endif %}
 <p>Cordialement,<br>{{ org.name }}</p>

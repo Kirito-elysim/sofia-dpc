@@ -1,0 +1,6 @@
+.res {display:grid;gap:8px}.res .res-note {margin:0;color:#46658f;font-size:12px}.res .res-error {color:#a51837}
+.res ul {display:grid;gap:6px;margin:0;padding:0;list-style:none}.res li {display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #d9e3f1;border-radius:8px;background:#fff}
+.res li>span {flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600}.res svg {width:16px;height:16px;flex:none}.res a {display:inline-flex;align-items:center;gap:6px;color:#0048ee}
+.res form {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end;gap:10px}.res form label {display:block;font-size:13px;font-weight:600}
+.res form :is(input,select) {display:block;box-sizing:border-box;width:100%;min-height:38px;margin-top:4px;padding:7px 10px;border:1px solid #bdc9dc;border-radius:7px;background:#fff;font:400 13px var(--font-sans)}
+.res button {display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:6px 12px;border:1px solid #cdd7e7;border-radius:7px;background:#fff;cursor:pointer}.res button:disabled {opacity:.5}

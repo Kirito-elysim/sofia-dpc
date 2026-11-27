@@ -6,6 +6,9 @@ Date : {{ class.date|date('d/m/Y') }}
 Organisme : {{ org.name }}
 
 Vous recevrez votre lien de connexion personnel avant la classe, ainsi que des rappels.
+{% if portal %}
+Vos classes et vos ressources : {{ portal }}
+{% endif %}
 
 Cordialement,
 {{ org.name }}

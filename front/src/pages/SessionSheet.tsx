@@ -5,6 +5,7 @@ import {Link,useNavigate,useParams} from 'react-router-dom'
 import {api} from '../api'
 import {ConfirmDialog,OrgBadges} from '../components/list/List'
 import {StatusBadge} from '../components/Badges'
+import {Resources} from '../components/Resources'
 import {day,type FormationRef,type Org,type Session,type SessionFormation} from './sessionModel'
 import './formation-wizard.css'
 import './sessions.css'
@@ -80,7 +81,7 @@ function Attached({item,session,canWrite,canReadLearners}:{item:SessionFormation
   // An empty object comes back as [] from the API.
   const [numbers,setNumbers]=useState<Record<string,string>>(()=>({...(Array.isArray(item.fundingNumbers)?{}:item.fundingNumbers)}))
   const [start,setStart]=useState(item.accessStartsOn??''),[end,setEnd]=useState(item.accessEndsOn??'')
-  const [removing,setRemoving]=useState(false)
+  const [removing,setRemoving]=useState(false),[resources,openResources]=useState(false)
   const refresh=()=>cache.invalidateQueries({queryKey:['sessions']})
   const save=useMutation({mutationFn:()=>patch('/session-formations/'+item.id,{capacity:Number(capacity),
     fundingNumbers:Object.fromEntries(Object.entries(numbers).filter(([,v])=>v.trim())),accessStartsOn:start||null,accessEndsOn:end||null}),onSuccess:refresh})
@@ -105,6 +106,8 @@ function Attached({item,session,canWrite,canReadLearners}:{item:SessionFormation
     <div className="ss-classes"><h4><Video/>Classes virtuelles ({item.classes?.length??0}){!!item.classes?.length&&<small>toutes à suivre</small>}</h4>
       {item.classes?.length?<ul>{item.classes.map(c=><li key={c.id}><Link to={'/classes/'+c.id}>{day(c.date)}{c.reference?' · '+c.reference:''}</Link><StatusBadge status={c.status}/></li>)}</ul>:<p className="tw-none">Aucune classe virtuelle planifiée.</p>}
       {canWrite&&(item.formation.active?<Link className="ss-plan" to="/classes/new" state={{sessionFormationId:item.id}}><CalendarPlus/>Planifier une classe virtuelle</Link>:<p className="tw-none">Publiez la formation pour planifier une classe.</p>)}</div>
+    {/* Loaded when opened: a session may hold many formations. */}
+    <details className="ss-classes" onToggle={e=>openResources(e.currentTarget.open)}><summary>Ressources pour les apprenants</summary>{resources&&<Resources owner={'/session-formations/'+item.id} canWrite={canWrite} note="En plus de celles de la formation, pour cette session seulement."/>}</details>
     {removing&&<ConfirmDialog title="Retirer la formation" pending={remove.isPending} error={remove.error?.message} onCancel={()=>setRemoving(false)} onConfirm={()=>remove.mutate()}>
       <p>« {title} » ne fera plus partie de la session « {session.name} ».</p></ConfirmDialog>}
   </article>

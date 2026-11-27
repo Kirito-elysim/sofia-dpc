@@ -24,7 +24,7 @@ class EnrollmentTest extends WebTestCase
         $this->client = static::createClient();
         $this->client->disableReboot(); // keeps the in-memory Messenger transport between requests
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-        $this->em->getConnection()->executeStatement('TRUNCATE registration, session_formation, session, enrollment, trainer, time_slot, message_log, audit_log, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
+        $this->em->getConnection()->executeStatement('TRUNCATE portal_link, learning_resource, registration, session_formation, session, enrollment, trainer, time_slot, message_log, audit_log, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
     }
 
     private function makeClass(int $capacity): VirtualClass

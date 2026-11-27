@@ -29,6 +29,7 @@ import TargetAudiences from './pages/TargetAudiences'
 import Sessions from './pages/Sessions'
 import SessionSheet from './pages/SessionSheet'
 import Registrations from './pages/Registrations'
+import LearnerPortal from './pages/LearnerPortal'
 
 function LegacyFormationLink() {
   const location = useLocation()
@@ -43,7 +44,10 @@ function LegacyZoomLink({ initial }: { initial: 'connection' | 'configs' }) {
 }
 
 export default function App() {
-  const me = useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/auth/me') })
+  // The learner portal has its own sign-in: it never asks who the team member is.
+  const portal = useLocation().pathname.startsWith('/espace')
+  const me = useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/auth/me'), enabled: !portal })
+  if (portal) return <LearnerPortal />
   if (me.isLoading) return null
   if (!me.data) return <Login />
   if (me.data.mustChangePassword) return <ChangePassword />

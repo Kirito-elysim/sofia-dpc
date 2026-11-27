@@ -20,6 +20,7 @@ final class SendEnrollmentConfirmationHandler
         private EntityManagerInterface $em,
         private MailerInterface $mailer,
         private Environment $twig,
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire('%env(SOFIA_FRONT_URL)%')] private string $baseUrl,
     ) {
     }
 
@@ -37,7 +38,9 @@ final class SendEnrollmentConfirmationHandler
         $kind = $manual ? 'MANUAL_REMINDER' : 'ENROLLMENT_CONFIRMATION';
         $org = $class->getOrganization();
         $ps = $enrollment->participant;
-        $ctx = ['ps' => $ps, 'class' => $class, 'org' => $org, 'enrollment' => $enrollment, 'manual' => $manual];
+        $ctx = ['ps' => $ps, 'class' => $class, 'org' => $org, 'enrollment' => $enrollment, 'manual' => $manual,
+            // Only PS registered to a session have a learner space.
+            'portal' => $class->sessionFormations() ? rtrim($this->baseUrl, '/').'/espace' : null];
 
         $email = (new Email())
             ->from(new Address($org->emailFrom, $org->name))
