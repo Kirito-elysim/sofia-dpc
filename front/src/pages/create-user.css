@@ -70,7 +70,7 @@
 .uc-photo label { position: relative; background: #edf4ff; color: #174ca6; }
 .uc-photo label:focus-within { outline: 2px solid #005dff; }
 .uc-photo input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
-.uc-profile img, .sofia-top > b > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.uc-profile img, .sofia-top summary b > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .uc-profile-picker { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:clamp(14px,2vw,34px); padding:18px 0 4px; }
 .uc-avatar { position:relative; display:grid; place-items:center; width:clamp(78px,7vw,108px); aspect-ratio:1; border-radius:50%; background:linear-gradient(135deg,#dae7fb,#edf4fc); color:#557ade; cursor:pointer; }
 .uc-avatar > svg { width:55%; height:55%; stroke-width:1.7; }

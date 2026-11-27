@@ -1,37 +1,66 @@
-.sofia-side,
-.sofia-top {
-  font: clamp(12px, .96vw, 16px)/1.2 var(--font-sans);
-  letter-spacing: -.035em;
+/* Sidebar: one rhythm for every entry (36px rows, 2px apart, 12px between groups), modelled on Edeliora. */
+.sofia-side { flex: none; box-sizing: border-box; width: 240px; min-height: 100dvh; padding: 16px 12px 24px; color: white; font: 500 14px/1.25 var(--font-sans); background: #032852 url('/catalog/waves.png') bottom left / 100% auto no-repeat; }
+.sofia-side .brand { display: block; width: 100%; height: auto; margin-bottom: 16px; }
+.sofia-side nav, .sofia-side details { display: flex; flex-direction: column; gap: 2px; }
+/* Chrome wraps the content of <details> in its own box, which ignores the gap above. */
+.sofia-side details::details-content { display: flex; flex-direction: column; gap: 2px; }
+.sofia-side :is(nav a, summary) { display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 0 12px; border-radius: 10px; color: #dbe6f5; }
+.sofia-side nav a:hover, .sofia-side summary:hover { background: #ffffff14; color: white; }
+.sofia-side nav a.active { color: white; background: linear-gradient(135deg, #004cff, #007fff 70%, #429aff); }
+.sofia-side .nav-picto { flex: none; width: 18px; height: 18px; }
+.sofia-side nav summary { justify-content: space-between; margin-top: 12px; min-height: 30px; list-style: none; cursor: pointer; color: #8fa8c8; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.sofia-side summary::-webkit-details-marker { display: none; }
+.sofia-side summary svg { width: 16px; height: 16px; transition: transform .15s; }
+.sofia-side details:not([open]) summary svg { transform: rotate(-90deg); }
+.sofia-side nav > details ~ a { margin-top: 12px; }
+
+/* Folded sidebar: icons only. Phones keep their horizontal menu. */
+.sofia-side { position: relative; }
+.sofia-side .sidebar-collapse { position: absolute; top: 22px; right: -13px; z-index: 5; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid #d9e3f1; border-radius: 50%; background: white; color: #0a2552; box-shadow: 0 2px 8px #0a255226; cursor: pointer; }
+.sofia-side .sidebar-collapse svg { width: 16px; height: 16px; transition: transform .15s; }
+@media (min-width: 761px) {
+  .sofia-side.collapsed { width: 72px; background-size: auto 100px; }
+  .sofia-side.collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+  /* Only the mark on the left of the logo. */
+  .sofia-side.collapsed .brand { width: 36px; height: 40px; margin-left: 1px; object-fit: cover; object-position: left; }
+  .sofia-side.collapsed nav a { justify-content: center; gap: 0; padding: 0; }
+  .sofia-side.collapsed .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .sofia-side.collapsed nav summary { height: 1px; min-height: 0; margin: 8px 8px 6px; padding: 0; background: #ffffff2e; overflow: hidden; pointer-events: none; }
+  .sofia-side.collapsed nav summary { font-size: 0; }
+  .sofia-side.collapsed nav summary > * { display: none; }
 }
 
-.sofia-side {
-  width: 15.55%;
-  min-height: 100dvh;
-  background: #032852 url('/catalog/waves.png') bottom left / 100% auto no-repeat;
-}
-
-.sofia-side nav { padding: .95vw .7vw; }
-.sofia-side nav :is(a, span, summary) { min-height: 2vw; padding: .5vw .9vw; }
-.sofia-side details :is(a, span) { min-height: 1.45vw; padding: .24vw .1vw .24vw 1.9vw; }
-.sofia-side .future span { white-space: nowrap; gap: .75vw; }
-
-.sofia-top { height: 3.1vw; position: relative; }
-.sofia-top .lucide-bell {
-  overflow: visible;
-  background: radial-gradient(circle at 83% 16%, #ed0000 0 19%, transparent 21%);
-}
+/* Top bar: fixed spacing on every screen width, modelled on Edeliora. */
+.sofia-top { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-height: 64px; padding: 8px 24px; border-bottom: 1px solid #edf1f7; font: 14px/1.25 var(--font-sans); }
+.sofia-top .top-icon { display: grid; place-items: center; width: 40px; height: 40px; color: #5d6b80; }
+.sofia-top .top-icon svg { width: 22px; height: 22px; }
+.sofia-top .lucide-bell { overflow: visible; background: radial-gradient(circle at 83% 16%, #ed0000 0 19%, transparent 21%); }
+.sofia-top > i { height: 28px; border-right: 1px solid #dbe5f4; }
+.sofia-top details { position: relative; }
+.sofia-top summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 3px 8px; border-radius: 10px; list-style: none; cursor: pointer; }
+.sofia-top summary::-webkit-details-marker { display: none; }
+.sofia-top summary:hover, .sofia-top details[open] summary { background: #eef4fc; }
+.sofia-top summary b { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; background: #0478ff; color: white; font-size: 13px; }
+.sofia-top summary > svg { width: 17px; height: 17px; color: #5d6b80; }
+.sofia-top .top-identity { display: grid; text-align: left; }
+.sofia-top .top-identity strong { font-size: 13.5px; }
+.sofia-top .top-identity small { font-size: 11.5px; color: #5d6b80; text-transform: capitalize; }
 
 @media (min-width: 761px) and (max-width: 1150px) {
-  .sofia-side { width: 185px; }
+  .sofia-side { width: 208px; }
 }
 
 @media (max-width: 760px) {
   .sofia-shell { display: block; }
-  .sofia-side { width: 100%; min-height: 0; padding: 0; background: #032852; }
-  .sofia-side .brand { width: 150px; }
-  .sofia-side nav { display: flex; align-items: center; overflow: auto; }
+  .sofia-top { gap: 2px; padding-inline: 12px; }
+  .sofia-top .top-identity { display: none; }
+  .sofia-side { width: 100%; min-height: 0; padding: 8px; background: #032852; }
+  .sofia-side .brand { width: 150px; margin-bottom: 8px; }
+  .sofia-side .sidebar-collapse { display: none; }
+  .sofia-side nav { flex-direction: row; align-items: center; overflow: auto; }
   .sofia-side nav > * { flex: none; white-space: nowrap; }
-  .sofia-side nav > span, .sofia-side nav .future { display: none; }
+  .sofia-side nav > details ~ a, .sofia-side nav summary { margin-top: 0; }
+  .sofia-side nav summary { min-height: 40px; gap: 6px; }
   .sofia-side details:not(:focus-within) > :not(summary) { display: none; }
 }
 
@@ -63,6 +92,5 @@
 .sofia-account-actions button svg { width: 16px; height: 16px }
 .sofia-account-actions p { padding: 6px 8px; color: #b42937 }
 
-.sofia-side .brand { height: auto }
 .impersonation{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:10px 14px;border:1px solid #F59E0B;border-radius:8px;background:#FEF3C7;color:#1E2347}
 .impersonation button{padding:6px 12px;border:0;border-radius:6px;background:#1557F5;color:#fff;font-weight:600;cursor:pointer}
