@@ -112,7 +112,7 @@ final class ZoomPresenceController extends AbstractController
             FROM attendance_event a JOIN class_slot s ON s.id=a.slot_id JOIN virtual_class c ON c.id=s.virtual_class_id
             JOIN formation t ON t.id=c.formation_id JOIN time_slot ts ON ts.id=s.time_slot_id LEFT JOIN trainer f ON f.id=s.trainer_id
             LEFT JOIN enrollment e ON e.id=a.enrollment_id LEFT JOIN participant p ON p.id=e.participant_id
-            WHERE {$scope->sql('t.organization_id')} ORDER BY a.at DESC,a.id DESC LIMIT 100");
+            WHERE {$scope->sql('c.organization_id')} ORDER BY a.at DESC,a.id DESC LIMIT 100");
         return $this->json($rows);
     }
 }

@@ -14,7 +14,6 @@ use App\Enum\EnrollmentStatus;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
-// Slots, trainers and Zoom accounts (ClassSlot) come in the next task.
 #[ORM\Entity]
 #[ApiResource(operations: [new GetCollection(), new Get()], security: "is_granted('SOFIA_CLASSES')", normalizationContext: ['groups' => ['read']], order: ['date' => 'ASC'])]
 class VirtualClass extends SoftDeletable
@@ -25,6 +24,14 @@ class VirtualClass extends SoftDeletable
     /** @var Collection<int, Enrollment>&Selectable<int, Enrollment> */
     #[ORM\OneToMany(targetEntity: Enrollment::class, mappedBy: 'virtualClass', fetch: 'EXTRA_LAZY')]
     private Collection $enrollments;
+
+    /** @var Collection<int, SessionFormation> every one of them is followed through this class */
+    #[ORM\ManyToMany(targetEntity: SessionFormation::class, inversedBy: 'virtualClasses'), ORM\JoinTable(name: 'virtual_class_session_formation')]
+    private Collection $sessionFormations;
+
+    // The organization of the sessions: it sends the messages and owns the class.
+    #[ORM\ManyToOne, ORM\JoinColumn(nullable: false)]
+    private Organization $organization;
 
     #[ORM\Column(length: 80, nullable: true), Groups('read')]
     public ?string $dpcAction = null;
@@ -46,8 +53,11 @@ class VirtualClass extends SoftDeletable
         #[ORM\Column(type: 'date_immutable'), Groups('read')] public \DateTimeImmutable $date,
         #[ORM\Column, Groups('read')] public int $capacity = 20,
         #[ORM\Column(enumType: ClassStatus::class), Groups('read')] public ClassStatus $status = ClassStatus::PLANNED,
+        ?Organization $organization = null,
     ) {
+        $this->organization = $organization ?? $formation->organization;
         $this->enrollments = new ArrayCollection();
+        $this->sessionFormations = new ArrayCollection();
     }
 
     #[Groups('read')]
@@ -56,9 +66,37 @@ class VirtualClass extends SoftDeletable
         return $this->id;
     }
 
+    #[Groups('read')]
     public function getOrganization(): Organization
     {
-        return $this->formation->organization;
+        return $this->organization;
+    }
+
+    public function attach(SessionFormation $sessionFormation): void
+    {
+        if (!$this->sessionFormations->contains($sessionFormation)) {
+            $this->sessionFormations->add($sessionFormation);
+            $sessionFormation->joinVirtualClass($this);
+        }
+    }
+
+    /** @return list<SessionFormation> */
+    public function sessionFormations(): array
+    {
+        return array_values($this->sessionFormations->toArray());
+    }
+
+    /** @return list<array{id: ?int, sessionId: ?int, session: string, formation: string}> */
+    #[Groups('read')]
+    public function getSessions(): array
+    {
+        $items = $this->sessionFormations->toArray();
+        // The formation naming the class comes first.
+        usort($items, fn (SessionFormation $a, SessionFormation $b): int => [$a->formation !== $this->formation, $a->getId()] <=> [$b->formation !== $this->formation, $b->getId()]);
+
+        return array_map(static fn (SessionFormation $s): array => [
+            'id' => $s->getId(), 'sessionId' => $s->session->getId(), 'session' => $s->session->name, 'formation' => $s->formation->title,
+        ], $items);
     }
 
     #[Groups('read')]

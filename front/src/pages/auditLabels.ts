@@ -2,7 +2,7 @@
 export const resources:Record<string,string>={
   Organization:'Organisme',Formation:'Formation',TargetAudience:'Public cible',Trainer:'Formateur',TimeSlot:'Créneau',User:'Utilisateur',
   VirtualClass:'Classe virtuelle',ClassSlot:'Créneau de classe',Participant:'Participant (PS)',Enrollment:'Inscription',ZoomAccount:'Compte Zoom',
-  MessageTemplate:'Modèle de message',CustomRole:'Rôle',
+  MessageTemplate:'Modèle de message',Session:'Session',SessionFormation:'Session-formation',Registration:'Inscription à une session',registrations:'Inscription à une session',sessions:'Session','session-formations':'Session-formation',CustomRole:'Rôle',
   // Rows written before « Training » became « Formation » (the audit trail is never rewritten).
   Training:'Formation',trainings:'Formation',
   organizations:'Organisme',formations:'Formation','target-audiences':'Public cible',trainers:'Formateur','time-slots':'Créneau',users:'Utilisateur',
@@ -22,7 +22,7 @@ export const fields:Record<string,string>={
   description:'Description',objectives:'Objectifs pédagogiques',orientation:'Orientation',modality:'Type de programme',publicationStatus:'Statut de publication',
   active:'Actif',archived:'Archivé',deletedAt:'Supprimé le',fundingTypes:'Financements',andpcCodes:'Codes ANDPC',fifplCodes:'Codes FIFPL',personalPrices:'Prix personnels',thumbnail:'Visuel',
   totalDurationMin:'Durée (min)',defaultCapacity:'Capacité',customReference:'Référence personnalisée',reference:'Référence',startTime:'Début',endTime:'Fin',
-  price:'Prix (€)',status:'Statut',date:'Date',capacity:'Capacité',code:'Code',roles:'Rôles',
+  price:'Prix (€)',startsOn:'Début',endsOn:'Fin',session:'Session',formation:'Formation',fundingNumbers:'Numéros de session',accessStartsOn:'Début d’accès',accessEndsOn:'Fin d’accès',sessionFormation:'Session-formation',participant:'Participant',funding:'Financement',status:'Statut',date:'Date',capacity:'Capacité',code:'Code',roles:'Rôles',
 }
 export function readable(value:unknown):string{
   if(value===null||value===undefined||value==='')return '—'

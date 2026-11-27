@@ -54,6 +54,9 @@ class EnrollmentController extends AbstractController
     #[IsGranted('SOFIA_ENROLL')]
     public function create(VirtualClass $class, #[MapRequestPayload] EnrollmentInput $in): JsonResponse
     {
+        if ($class->sessionFormations()) {
+            return $this->problem('REGISTER_THROUGH_SESSION', 'Les inscriptions de cette classe se font dans sa session.', 409);
+        }
         try {
             $e = $this->enrollments->enroll($class, new Participant($in->firstName, $in->lastName, $in->email, $in->phone, $in->rpps));
         } catch (EnrollmentException $ex) {
@@ -67,6 +70,9 @@ class EnrollmentController extends AbstractController
     #[IsGranted('SOFIA_ENROLL')]
     public function cancel(Enrollment $enrollment): Response
     {
+        if ($enrollment->virtualClass->sessionFormations()) {
+            return $this->problem('REGISTER_THROUGH_SESSION', 'Les inscriptions de cette classe se gèrent dans sa session.', 409);
+        }
         $this->enrollments->cancel($enrollment);
 
         return new Response(null, Response::HTTP_NO_CONTENT);

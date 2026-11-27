@@ -43,11 +43,14 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
     <>
       <div className="page-heading"><Video/>
         <h1 className="text-2xl font-bold">{c.formation.title}</h1>
-        <OrganizationBadge {...c.formation.organization} />
+        <OrganizationBadge {...(c.organization??c.formation.organization)} />
         <StatusBadge status={c.status} />
         <span className="ml-auto text-sm">{c.enrolledCount} / {c.capacity} places apprenants occupées</span>
       </div>
 
+      {!!c.sessions?.length&&<section className="sofia-card mb-5 p-4"><h2 className="mb-2 text-lg font-semibold">Sessions réunies dans cette classe</h2>
+        <p className="mb-2 text-sm text-slate-500">Les inscriptions se gèrent dans la session ; les PS inscrits rejoignent automatiquement cette classe.</p>
+        <ul>{c.sessions.map(s=><li key={s.id}><Link className="font-medium text-primary" to={'/sessions/'+s.sessionId}>{s.session}</Link> · {s.formation}</li>)}</ul></section>}
       <section className="sofia-card mb-5 p-4">
         <h2 className="mb-2 text-lg font-semibold">Formateurs par créneau</h2>
         {list.isLoading && <p>Chargement des affectations…</p>}
@@ -63,7 +66,7 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
           </details>}</div>)}
       </section>
       <h2 className="mb-3 text-lg font-semibold">Apprenants inscrits (PS)</h2>
-      {canEdit && c.status === 'PLANNED' && (
+      {canEdit && !c.sessions?.length && c.status === 'PLANNED' && (
         <form onSubmit={submit} className="sofia-card mb-6 grid grid-cols-5 gap-2 p-4">
           <input name="firstName" required placeholder="Prénom" className={input} />
           <input name="lastName" required placeholder="Nom" className={input} />
@@ -82,7 +85,7 @@ export default function ClassDetail({ canEdit }: { canEdit: boolean }) {
             <tr key={x.id} className="border-t border-slate-100">
               <td className="p-3"><Link to={'/learners/'+x.participant.id}>{x.participant.firstName} {x.participant.lastName.toUpperCase()}</Link></td>
               <td>{x.participant.email}</td><td>{x.participant.phone}</td><td>{x.participant.rpps}</td><td>{list.data?.zoomRegistrations?.filter(r=>r.enrollment===x.id).map(r=><p key={r.slot}>{r.label} · {states[r.state]??r.state} {r.url&&<a className="text-blue-700 underline" href={r.url} target="_blank" rel="noreferrer">Lien personnel</a>}</p>)}</td>
-              <td className="pr-3 text-right">{canEdit && <button onClick={() => confirm('Annuler cette inscription ?') && cancel.mutate(x.id)} className="text-cancelled">Annuler</button>}</td>
+              <td className="pr-3 text-right">{canEdit && !c.sessions?.length && <button onClick={() => confirm('Annuler cette inscription ?') && cancel.mutate(x.id)} className="text-cancelled">Annuler</button>}</td>
             </tr>
           ))}
         </tbody>

@@ -31,7 +31,7 @@ final class SendScheduledReminders extends Command
                 (now() AT TIME ZONE 'Europe/Paris') + make_interval(mins=>m.minutes_before) - interval '2 minutes'
                 AND (now() AT TIME ZONE 'Europe/Paris') + make_interval(mins=>m.minutes_before)
             JOIN virtual_class c ON c.id=s.virtual_class_id
-            JOIN formation t ON t.id=c.formation_id JOIN organization o ON o.id=t.organization_id
+            JOIN formation t ON t.id=c.formation_id JOIN organization o ON o.id=c.organization_id
             JOIN enrollment e ON e.virtual_class_id=c.id AND e.status='ACTIVE'
             JOIN participant p ON p.id=e.participant_id LEFT JOIN trainer f ON f.id=s.trainer_id
             LEFT JOIN zoom_registration z ON z.enrollment_id=e.id AND z.slot_id=s.id AND z.state='approved'

@@ -43,6 +43,9 @@ export type VirtualClass = {
   status: 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
   enrolledCount: number
   formation: { title: string; organization: { name: string; code: string } }
+  /** Organisation of the sessions served by the class. */
+  organization?: { name: string; code: string }
+  sessions?: { id: number; sessionId: number; session: string; formation: string }[]
 }
 export type Enrollment = {
   id: number

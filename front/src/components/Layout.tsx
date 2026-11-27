@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Activity, Bell, Building2, CalendarDays, ChevronDown, ChevronLeft, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, ShieldCheck, UserCog, UserRound, UsersRound, Users, Video, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, Building2, CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ClipboardList, Clock, GraduationCap, House, CircleHelp, LogOut, Mail, Monitor, ShieldCheck, UserCog, UserRound, UsersRound, Users, Video, type LucideIcon } from 'lucide-react'
 import { NavLink, Outlet, useMatch } from 'react-router-dom'
 import { api, impersonate, type Me } from '../api'
 import '../planning.css'
@@ -9,7 +9,7 @@ import './navigation.css'
 type Entry = [LucideIcon, string, string, string]
 const main: Entry[] = [
   [House,'Tableau de bord','/dashboard','DASHBOARD'], [CalendarDays,'Planning','/planning','PLANNING'],
-  [Monitor,'Classes','/classes','CLASSES'], [UsersRound,'Participants (PS)','/learners','LEARNERS'],
+  [CalendarRange,'Sessions','/sessions','CLASSES'], [Monitor,'Classes','/classes','CLASSES'], [UsersRound,'Participants (PS)','/learners','LEARNERS'],
   [Activity,'Suivi en direct','/live','LIVE'],
 ]
 const settings: Entry[] = [

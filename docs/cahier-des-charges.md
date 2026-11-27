@@ -73,6 +73,9 @@ La phase 1 reprend l'outil actuel et supprime la saisie manuelle sur Zoom, premi
 
 ### Une classe, deux créneaux
 
+> Évolution validée le 27 novembre 2026 : une session est désormais une période rattachée à des formations, avec 0 à n
+> classes virtuelles (voir `proposition-sessions.md`). La description d'une classe ci-dessous reste valable.
+
 Une session devient **une seule classe virtuelle** avec plusieurs créneaux (matin, après-midi), chacun avec son formateur. Les PS sont comptés une fois, et la présence reste tracée par demi-journée, comme l'exige l'ANDPC. Le montage Zoom exact (une réunion relancée par demi-journée, ou une réunion par créneau) sera arrêté après test.
 
 ### Création et cycle de vie d'une classe

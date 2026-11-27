@@ -23,7 +23,7 @@ final class AttendanceSummaryController extends AbstractController
                 JOIN virtual_class c ON c.id = s.virtual_class_id
                 JOIN formation t ON t.id = c.formation_id
                 JOIN time_slot ts ON ts.id = s.time_slot_id
-                WHERE {$scope->sql('t.organization_id')} AND c.status IN ('PLANNED', 'IN_PROGRESS')
+                WHERE {$scope->sql('c.organization_id')} AND c.status IN ('PLANNED', 'IN_PROGRESS')
                   AND s.starts_at <= (now() AT TIME ZONE 'Europe/Paris')
                   AND s.ends_at > (now() AT TIME ZONE 'Europe/Paris')
             ), stream AS (

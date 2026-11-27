@@ -53,7 +53,7 @@ final class OperationsController extends AbstractController
         $before = max(0, $request->query->getInt('before'));
         $search = mb_strtolower(trim($request->query->getString('q')));
         $rows = $db->fetchAllAssociative("SELECT id, first_name, last_name, email FROM participant
-            WHERE ({$scope->sql('NULL')} OR EXISTS (SELECT 1 FROM enrollment e JOIN virtual_class c ON c.id=e.virtual_class_id JOIN formation t ON t.id=c.formation_id WHERE e.participant_id=participant.id AND {$scope->sql('t.organization_id')})) AND position(? in lower(first_name || ' ' || last_name || ' ' || email)) > 0 "
+            WHERE ({$scope->sql('NULL')} OR EXISTS (SELECT 1 FROM enrollment e JOIN virtual_class c ON c.id=e.virtual_class_id JOIN formation t ON t.id=c.formation_id WHERE e.participant_id=participant.id AND {$scope->sql('c.organization_id')}) OR EXISTS (SELECT 1 FROM registration r JOIN session_formation sf ON sf.id=r.session_formation_id JOIN session se ON se.id=sf.session_id WHERE r.participant_id=participant.id AND {$scope->sql('se.organization_id')})) AND position(? in lower(first_name || ' ' || last_name || ' ' || email)) > 0 "
             .($before ? 'AND id < ? ' : '').'ORDER BY id DESC LIMIT 51', $before ? [$search, $before] : [$search]);
         $page = array_slice($rows, 0, 50);
         return $this->json(['entries' => $page, 'next' => count($rows) > 50 ? end($page)['id'] : null]);
@@ -66,10 +66,10 @@ final class OperationsController extends AbstractController
         return $this->json(['name' => $learner->firstName.' '.$learner->lastName, 'email' => $learner->email, 'phone' => $learner->phone,
             'classes' => $db->fetchAllAssociative('SELECT e.id, c.id AS "classId", t.title, c.date, e.status, c.status AS "classStatus"
                 FROM enrollment e JOIN virtual_class c ON c.id=e.virtual_class_id JOIN formation t ON t.id=c.formation_id
-                WHERE e.participant_id=? AND '.$scope->sql('t.organization_id').' ORDER BY c.date DESC,e.id DESC', [$learner->getId()]),
+                WHERE e.participant_id=? AND '.$scope->sql('c.organization_id').' ORDER BY c.date DESC,e.id DESC', [$learner->getId()]),
             'messages' => $db->fetchAllAssociative('SELECT m.id,m.at,m.channel,m.kind,m.status,m.sent_by AS author,t.title
                 FROM message_log m JOIN enrollment e ON m.enrollment_id=e.id JOIN virtual_class c ON c.id=e.virtual_class_id
-                JOIN formation t ON t.id=c.formation_id WHERE e.participant_id=? AND '.$scope->sql('t.organization_id').' ORDER BY m.at DESC,m.id DESC', [$learner->getId()])]);
+                JOIN formation t ON t.id=c.formation_id WHERE e.participant_id=? AND '.$scope->sql('c.organization_id').' ORDER BY m.at DESC,m.id DESC', [$learner->getId()])]);
     }
 
     #[Route('/api/enrollments/{id}/relance', methods: ['POST'])]

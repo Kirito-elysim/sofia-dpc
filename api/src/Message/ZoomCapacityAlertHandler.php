@@ -17,13 +17,14 @@ final class ZoomCapacityAlertHandler
     {
         $formation = $this->em->find(Formation::class, $alert->formationId);
         if (!$formation) { return; }
+        $organization = ($alert->organizationId ? $this->em->find(\App\Entity\Organization::class, $alert->organizationId) : null) ?? $formation->organization;
         $admins = array_filter($this->em->getRepository(User::class)->findBy(['active' => true]),
             static fn (User $u) => $u->getRole() === 'ROLE_SUPER_ADMIN' || (
                 in_array('SCHEDULE', \App\Security\Permissions::forUser($u), true)
-                && ($u->organizations->contains($formation->organization) || ($u->organizations->isEmpty() && $u->organization === $formation->organization))
+                && ($u->organizations->contains($organization) || ($u->organizations->isEmpty() && $u->organization === $organization))
             ));
         if (!$admins) { return; }
-        $this->mailer->send((new Email())->from($formation->organization->emailFrom)
+        $this->mailer->send((new Email())->from($organization->emailFrom)
             ->bcc(...array_values(array_map(static fn (User $u) => $u->email, $admins)))
             ->subject('SOFIA — Aucun compte Zoom disponible')
             ->text(sprintf("Réservation bloquée pour %s, le %s (%s).", $formation->title, $alert->day, $alert->slot)));

@@ -26,6 +26,9 @@ import Organizations from './pages/Organizations'
 import TimeSlots from './pages/TimeSlots'
 import { Trainers, Formations, Users } from './pages/Settings'
 import TargetAudiences from './pages/TargetAudiences'
+import Sessions from './pages/Sessions'
+import SessionSheet from './pages/SessionSheet'
+import Registrations from './pages/Registrations'
 
 function LegacyFormationLink() {
   const location = useLocation()
@@ -69,6 +72,10 @@ export default function App() {
         {can('LIVE')&&<Route path="live" element={<LivePresence canSend={can('REMIND')}/>}/>}
         {can('LEARNERS')&&<Route path="learners" element={<Directory key="learners"/>}/>}
         {can('LEARNERS')&&<Route path="learners/:id" element={<LearnerSheet canRemind={can('REMIND')}/>}/>}
+        {can('CLASSES')&&<Route path="sessions" element={<Sessions canWrite={can('SCHEDULE')}/>}/>}
+        {can('SCHEDULE')&&<Route path="sessions/new" element={<SessionSheet canWrite/>}/>}
+        {can('LEARNERS')&&<Route path="sessions/:id/formations/:formationId" element={<Registrations canWrite={can('ENROLL')}/>}/>}
+        {can('CLASSES')&&<Route path="sessions/:id" element={<SessionSheet canWrite={can('SCHEDULE')} canReadLearners={can('LEARNERS')}/>}/>}
         {can('CLASSES')&&<Route path="classes" element={<Classes/>}/>}
         {can('CLASSES')&&<Route path="classes/:id" element={<ClassDetail canEdit={can('ENROLL')}/>}/>}
         {can('CONFIGS')&&<Route path="settings/zoom" element={<ZoomWorkspace global={global} canWrite={can('EDIT_CONFIGS')}/>}/>}

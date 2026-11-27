@@ -16,7 +16,7 @@ final class OrganizationSummaryController extends AbstractController
     {
         return $this->json($db->fetchAllAssociative(<<<SQL
             SELECT o.id, COALESCE(c.total, 0) AS total, COALESCE(c.learners,0) AS learners,
-                (SELECT COUNT(DISTINCT e.participant_id) FROM enrollment e JOIN virtual_class v ON v.id=e.virtual_class_id JOIN formation t ON t.id=v.formation_id WHERE e.status='ACTIVE' AND {$scope->sql('t.organization_id')}) AS global_learners,
+                (SELECT COUNT(DISTINCT e.participant_id) FROM enrollment e JOIN virtual_class v ON v.id=e.virtual_class_id JOIN formation t ON t.id=v.formation_id WHERE e.status='ACTIVE' AND {$scope->sql('v.organization_id')}) AS global_learners,
                 p.details->>'address' AS address, p.details->>'zipCode' AS zip, p.details->>'city' AS city,
                 p.details->>'phone' AS phone, p.details->>'email' AS email,
                 EXISTS(SELECT 1 FROM organization_document d WHERE d.organization_id=o.id AND d.kind='logo' AND d.deleted_at IS NULL) AS has_logo,
@@ -25,10 +25,10 @@ final class OrganizationSummaryController extends AbstractController
             FROM organization o
             LEFT JOIN organization_profile p ON p.organization_id=o.id
             LEFT JOIN (
-                SELECT t.organization_id, COUNT(DISTINCT v.id) AS total, COUNT(DISTINCT e.participant_id) AS learners
+                SELECT v.organization_id, COUNT(DISTINCT v.id) AS total, COUNT(DISTINCT e.participant_id) AS learners
                 FROM virtual_class v JOIN formation t ON t.id = v.formation_id
                 LEFT JOIN enrollment e ON e.virtual_class_id=v.id AND e.status='ACTIVE'
-                GROUP BY t.organization_id
+                GROUP BY v.organization_id
             ) c ON c.organization_id = o.id
             LEFT JOIN (
                 SELECT DISTINCT ON (entity_id) entity_id, at, user_email

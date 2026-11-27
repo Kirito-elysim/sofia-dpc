@@ -1,0 +1,15 @@
+.ss .tw-header>div {flex:1}.tw .ss-back {display:inline-flex;align-items:center;gap:8px;color:#174ca6}.ss-back svg {width:16px;height:16px}
+.ss form {display:grid;gap:12px}.ss fieldset {min-width:0;margin:0;padding:0;border:0}
+.ss button.primary {color:#fff}.ss form>button {justify-self:start}.ss button svg {width:16px;height:16px}
+.ss .ss-error {color:#a51837}
+.ss-attach {display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:14px 0}.ss-attach label {flex:1 1 280px}.ss .ss-attach>button {height:42px}.ss .ss-attach>:is(small,p) {flex-basis:100%;text-align:left}
+.ss-formation {margin-top:12px;padding:14px 16px;border:1px solid var(--card-border);border-radius:12px;background:#fff}
+.ss-formation>header {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.ss .ss-formation h3 {font-size:17px}.ss .ss-formation>header small {text-align:left}
+.ss-access {padding:5px 12px;border-radius:16px;background:#e8f1ff;color:#174ca6;font-size:12px;font-weight:600}
+.ss-formation footer {display:flex;gap:10px;position:static;padding:0;border:0;background:none}.ss .ss-formation footer button:first-of-type {margin:0}
+.ss-classes {margin-top:14px;padding-top:12px;border-top:1px solid var(--card-border)}.ss .ss-classes h4 {display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:15px;font-weight:700}.ss-classes h4 svg {width:18px;color:var(--accent)}.ss .ss-classes h4 small {font-weight:400}
+.ss-classes ul {display:grid;gap:6px;margin:0 0 10px;padding:0;list-style:none}.ss-classes li {display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border:1px solid var(--card-border);border-radius:8px}.ss-classes li a {color:#174ca6;font-weight:600}
+.tw .ss-plan {display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:8px 13px;border:1px solid #a7c3ff;border-radius:7px;color:#0048ee;font-weight:600}.ss-plan svg {width:16px;height:16px}
+.ss-presence {display:grid;gap:4px;margin:0;padding:4px 0;list-style:none}.ss-presence li {padding:2px 8px;border-radius:10px;background:#eef1f5;font-size:12px}.ss-presence li.seen {background:#e4f8e9;color:#087d33}.ss-presence li.absent {background:#ffe8e8;color:#a51837}.ss-presence a {font-weight:600;color:inherit}
+.ss-actions {display:flex;gap:10px}
+.tw.ss-entry {min-height:0;padding-bottom:0}.ls-page.ss-entry-list {padding-inline:clamp(12px,2vw,28px)}

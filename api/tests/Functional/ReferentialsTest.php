@@ -16,7 +16,7 @@ class ReferentialsTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = static::createClient();
-        $this->em()->getConnection()->executeStatement('TRUNCATE audit_log, enrollment, trainer, time_slot, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
+        $this->em()->getConnection()->executeStatement('TRUNCATE registration, session_formation, session, audit_log, enrollment, trainer, time_slot, participant, virtual_class, formation, organization, "user" RESTART IDENTITY CASCADE');
     }
 
     private function em(): EntityManagerInterface
@@ -47,6 +47,14 @@ class ReferentialsTest extends WebTestCase
         ], $body ? json_encode($body) : null);
 
         return json_decode($this->client->getResponse()->getContent() ?: '[]', true) ?? [];
+    }
+
+    private function sessionFormation(int $org, int $formation): int
+    {
+        $this->call('PATCH', "/api/formations/$formation", ['publicationStatus' => 'published']);
+        $session = $this->call('POST', '/api/sessions', ['organization' => "/api/organizations/$org", 'name' => 'Juin', 'startsOn' => '2030-06-01', 'endsOn' => '2030-06-30'])['id'];
+
+        return $this->call('POST', '/api/session-formations', ['session' => "/api/sessions/$session", 'formation' => "/api/formations/$formation"])['id'];
     }
 
     private function org(): int
@@ -226,7 +234,8 @@ class ReferentialsTest extends WebTestCase
         foreach ([['Matin', '09:00', '13:00'], ['Après-midi', '14:00', '17:00']] as [$label, $startTime, $endTime]) {
             $slots[] = ['trainerId' => $trainer, 'timeSlotId' => $this->call('POST', '/api/time-slots', compact('label', 'startTime', 'endTime'))['id']];
         }
-        $body = ['date' => '2030-06-03', 'formationId' => $formation, 'dpcAction' => '001', 'dpcSession' => '002', 'slots' => $slots];
+        $link = $this->sessionFormation($org, $formation);
+        $body = ['date' => '2030-06-03', 'sessionFormationIds' => [$link], 'slots' => $slots];
         $this->assertSame('NO_ZOOM_ACCOUNT_AVAILABLE', $this->call('POST', '/api/scheduled-classes', $body)['code']);
         $this->assertResponseStatusCodeSame(409);
         $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom 1', 'profile' => 'DEMO', 'hostUserId' => 'test-host']);
@@ -278,15 +287,16 @@ class ReferentialsTest extends WebTestCase
         $configPayload['policy']['passcode']=true;
         $config=$this->call('POST','/api/virtual-class-configs',$configPayload);
         self::assertResponseIsSuccessful();
-        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','formationId' => $formation,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','sessionFormationIds' => [$this->sessionFormation($org, $formation)],'slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
         $this->call('POST','/api/virtual-class-configs',[...$configPayload,'id'=>$config['id'],'policy'=>['waitingRoom'=>true,
             'passcode'=>false,'joinBeforeHost'=>false,'recording'=>'account_default']]);
         self::assertResponseIsSuccessful();
+        $link = $this->call('GET', "/api/virtual-classes/$class")['sessions'][0]['id'];
         foreach (['alice','paul'] as $first) {
-            $this->call('POST',"/api/virtual-classes/$class/enrollments",['firstName'=>$first,'lastName'=>'Test','email'=>$first.'@example.test']);
+            $this->call('POST',"/api/session-formations/$link/registrations",['firstName'=>$first,'lastName'=>'Test','email'=>$first.'@example.test']);
             self::assertResponseStatusCodeSame(201);
         }
-        $this->call('POST',"/api/virtual-classes/$class/enrollments",['firstName'=>'Ana','lastName'=>'Test','email'=>'ana@example.test']);
+        $this->call('POST',"/api/session-formations/$link/registrations",['firstName'=>'Ana','lastName'=>'Test','email'=>'ana@example.test']);
         self::assertResponseStatusCodeSame(409);
         $http=new \Symfony\Component\HttpClient\MockHttpClient(static function(string $method,string $url,array $options) {
             if (str_ends_with($url,'/oauth/token')) { $response=['access_token'=>'local-token']; }
@@ -337,9 +347,10 @@ class ReferentialsTest extends WebTestCase
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
-        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','formationId' => $formation,'dpcAction' => 'A','dpcSession' => 'S','slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
+        $class = $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03','sessionFormationIds' => [$this->sessionFormation($org, $formation)],'slots' => [['timeSlotId' => $time,'trainerId' => $trainer]]])['id'];
         $this->em()->getConnection()->executeStatement("UPDATE class_slot SET meeting_number='12345678901' WHERE virtual_class_id=?", [$class]);
-        $this->call('POST', "/api/virtual-classes/$class/enrollments", ['firstName' => 'Paul','lastName' => 'Test','email' => 'ps@example.test']);
+        $link = $this->call('GET', "/api/virtual-classes/$class")['sessions'][0]['id'];
+        $this->call('POST', "/api/session-formations/$link/registrations", ['firstName' => 'Paul','lastName' => 'Test','email' => 'ps@example.test']);
         $ts = (string) time();
         $registration = function(string $event,int $stamp) use ($host,$ts): void {
             $body=json_encode(['event'=>$event,'event_ts'=>$stamp,'payload'=>['account_id'=>'demo-account',
@@ -855,7 +866,7 @@ class ReferentialsTest extends WebTestCase
         $slot = $this->call('POST', '/api/time-slots', ['label' => 'Soir', 'startTime' => '18:00', 'endTime' => '20:00']);
         $this->assertTrue($slot['active']);
         $this->call('PATCH', "/api/time-slots/{$slot['id']}", ['active' => false]);
-        $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03', 'formationId' => $formation, 'dpcAction' => 'A', 'dpcSession' => 'S', 'slots' => [['timeSlotId' => $slot['id'], 'trainerId' => $trainer]]]);
+        $this->call('POST', '/api/scheduled-classes', ['date' => '2030-06-03', 'sessionFormationIds' => [$this->sessionFormation($org, $formation)], 'slots' => [['timeSlotId' => $slot['id'], 'trainerId' => $trainer]]]);
         $this->assertResponseStatusCodeSame(422);
         $this->assertSame([], $this->call('GET', '/api/time-slot-usage'));
 
@@ -977,6 +988,123 @@ class ReferentialsTest extends WebTestCase
 
         $this->loginAs('SUIVI');
         $this->call('GET', '/api/formations?deleted=1');
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testSessionAttachesPublishedFormationsWithInheritedAccess(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $other = $this->call('POST', '/api/organizations', ['name' => 'Autre', 'code' => 'AUTRE', 'emailFrom' => 'autre@example.test', 'siret' => '12345678901235'])['id'];
+        $formation = fn (int $o, string $status) => $this->call('POST', '/api/formations', ['title' => 'F', 'organization' => "/api/organizations/$o", 'publicationStatus' => $status])['id'];
+        [$published, $draft, $foreign] = [$formation($org, 'published'), $formation($org, 'draft'), $formation($other, 'published')];
+        $body = ['organization' => "/api/organizations/$org", 'name' => 'Novembre', 'startsOn' => '2030-11-01', 'endsOn' => '2030-11-30'];
+        $this->call('POST', '/api/sessions', ['endsOn' => '2030-10-01'] + $body);
+        $this->assertResponseStatusCodeSame(422);
+        $session = $this->call('POST', '/api/sessions', $body)['id'];
+        $this->assertResponseStatusCodeSame(201);
+        $attach = fn (int $f) => $this->call('POST', '/api/session-formations', ['session' => "/api/sessions/$session", 'formation' => "/api/formations/$f", 'capacity' => 12]);
+        foreach ([$draft, $foreign] as $refused) {
+            $attach($refused);
+            $this->assertResponseStatusCodeSame(422);
+        }
+        $link = $attach($published);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame(['2030-11-01', '2030-11-30'], [$link['effectiveAccessStartsOn'], $link['effectiveAccessEndsOn']]);
+        $attach($published);
+        $this->assertResponseStatusCodeSame(409);
+        $url = '/api/session-formations/'.$link['id'];
+        $changed = $this->call('PATCH', $url, ['accessEndsOn' => '2030-12-31', 'fundingNumbers' => ['ANDPC' => '013']]);
+        $this->assertSame(['2030-11-01', '2030-12-31', '013'], [$changed['effectiveAccessStartsOn'], $changed['effectiveAccessEndsOn'], $changed['fundingNumbers']['ANDPC']]);
+        $this->call('PATCH', $url, ['accessEndsOn' => '2030-01-01']);
+        $this->assertResponseStatusCodeSame(422);
+        $this->call('DELETE', "/api/sessions/$session");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('DELETE', "/api/formations/$published");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('DELETE', $url);
+        $this->assertCount(0, $this->call('GET', "/api/sessions/$session")['sessionFormations']);
+        $this->call('DELETE', "/api/sessions/$session");
+        $this->assertResponseStatusCodeSame(204);
+        $this->loginAs('LECTURE');
+        $this->call('POST', '/api/sessions', $body);
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    public function testOneVirtualClassServesSeveralSessionFormations(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom', 'profile' => 'DEMO', 'hostUserId' => 'shared-host']);
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'shared@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
+        $slot = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
+        $links = [];
+        foreach (['Diabète', 'Asthme'] as $title) {
+            $formation = $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => $title, 'andpcCodes' => [['organization' => $org, 'year' => 2030, 'code' => 'ACT-'.$title]]])['id'];
+            $links[] = $this->sessionFormation($org, $formation);
+        }
+        $this->call('PATCH', "/api/session-formations/{$links[0]}", ['fundingNumbers' => ['ANDPC' => '013']]);
+        $body = ['sessionFormationIds' => $links, 'slots' => [['timeSlotId' => $slot, 'trainerId' => $trainer]]];
+        $this->call('POST', '/api/scheduled-classes', $body + ['date' => '2030-07-01']);
+        $this->assertResponseStatusCodeSame(422); // outside the access dates
+        $class = $this->call('POST', '/api/scheduled-classes', $body + ['date' => '2030-06-30'])['id'];
+        $this->assertResponseStatusCodeSame(201);
+        $read = $this->call('GET', "/api/virtual-classes/$class");
+        $this->assertSame(['Diabète', 'Asthme'], array_column($read['sessions'], 'formation'));
+        $this->assertSame(['ACT-Diabète', '013'], [$read['dpcAction'], $read['dpcSession']]);
+        $session = $read['sessions'][1]['sessionId'];
+        $this->assertSame($class, $this->call('GET', "/api/sessions/$session")['sessionFormations'][0]['classes'][0]['id']);
+        $this->call('PATCH', "/api/sessions/$session", ['endsOn' => '2030-06-15']);
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('DELETE', "/api/session-formations/{$links[1]}");
+        $this->assertResponseStatusCodeSame(409);
+    }
+
+    public function testRegistrationFollowsEveryClassOfTheSessionFormation(): void
+    {
+        $this->loginAs('SUPER_ADMIN');
+        $org = $this->org();
+        $this->call('POST', '/api/zoom-accounts', ['label' => 'Zoom', 'profile' => 'DEMO', 'hostUserId' => 'reg-host']);
+        $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'A', 'lastName' => 'B', 'email' => 'reg@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
+        $slot = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
+        $links = [];
+        foreach (['Un', 'Deux'] as $title) {
+            $links[] = $this->sessionFormation($org, $this->call('POST', '/api/formations', ['organization' => "/api/organizations/$org", 'title' => $title, 'fundingTypes' => ['ANDPC']])['id']);
+        }
+        $plan = fn (string $date, array $served) => $this->call('POST', '/api/scheduled-classes', ['date' => $date, 'sessionFormationIds' => $served, 'slots' => [['timeSlotId' => $slot, 'trainerId' => $trainer]]])['id'];
+        $shared = $plan('2030-06-03', $links);
+        $this->call('PATCH', "/api/session-formations/{$links[0]}", ['capacity' => 1]);
+        $url = "/api/session-formations/{$links[0]}/registrations";
+        $ps = ['firstName' => 'Paul', 'lastName' => 'Test', 'email' => 'ps-reg@example.test'];
+        $this->call('POST', $url, $ps + ['funding' => 'FIFPL']);
+        $this->assertResponseStatusCodeSame(422);
+        $first = $this->call('POST', $url, $ps + ['funding' => 'ANDPC'])['id'];
+        $this->assertResponseStatusCodeSame(201);
+        $this->call('POST', $url, $ps);
+        $this->assertSame('ALREADY_REGISTERED', json_decode($this->client->getResponse()->getContent(), true)['code']);
+        $this->assertSame('CAPACITY_REACHED', $this->call('POST', $url, ['email' => 'other@example.test'] + $ps)['code']);
+        // The same PS through the other formation sharing the class is counted once in it.
+        $second = $this->call('POST', "/api/session-formations/{$links[1]}/registrations", $ps)['id'];
+        $this->assertSame(1, $this->call('GET', "/api/virtual-classes/$shared")['enrolledCount']);
+        // A class planned afterwards takes in the registered PS.
+        $later = $plan('2030-06-04', [$links[0]]);
+        $this->assertSame(1, $this->call('GET', "/api/virtual-classes/$later")['enrolledCount']);
+        $this->call('POST', "/api/virtual-classes/$later/enrollments", ['email' => 'direct@example.test'] + $ps);
+        $this->assertResponseStatusCodeSame(409);
+        $list = $this->call('GET', $url);
+        $this->assertSame([2, true, 14400], [count($list['registrations'][0]['attendance']), $list['registrations'][0]['attendance'][0]['upcoming'], $list['registrations'][0]['attendance'][0]['expected']]);
+        $changed = $this->call('PATCH', "/api/registrations/$first", ['funding' => 'ANDPC', 'accessEndsOn' => '2030-12-31']);
+        $this->assertSame(['2030-06-01', '2030-12-31'], [$changed['effectiveAccessStartsOn'], $changed['effectiveAccessEndsOn']]);
+        $this->call('DELETE', "/api/session-formations/{$links[0]}");
+        $this->assertResponseStatusCodeSame(409);
+        $this->call('DELETE', "/api/registrations/$first");
+        $this->assertSame([1, 0], [$this->call('GET', "/api/virtual-classes/$shared")['enrolledCount'], $this->call('GET', "/api/virtual-classes/$later")['enrolledCount']]);
+        $this->call('DELETE', "/api/registrations/$second");
+        $this->assertSame(0, $this->call('GET', "/api/virtual-classes/$shared")['enrolledCount']);
+        $reader = $this->loginAs('LECTURE');
+        $reader->addOrganization($this->em()->getReference(\App\Entity\Organization::class, $org));
+        $this->em()->flush();
+        $this->call('POST', $url, $ps);
         $this->assertResponseStatusCodeSame(403);
     }
 }

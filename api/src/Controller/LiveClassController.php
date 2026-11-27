@@ -23,7 +23,7 @@ final class LiveClassController extends AbstractController
         $rows=$db->fetchAllAssociative(<<<SQL
             WITH slots AS (
                 SELECT s.*,t.title FROM class_slot s JOIN virtual_class c ON c.id=s.virtual_class_id JOIN formation t ON t.id=c.formation_id
-                WHERE {$scope->sql('t.organization_id')} AND c.status IN ('IN_PROGRESS','PLANNED') AND s.ends_at>now() AT TIME ZONE 'Europe/Paris'
+                WHERE {$scope->sql('c.organization_id')} AND c.status IN ('IN_PROGRESS','PLANNED') AND s.ends_at>now() AT TIME ZONE 'Europe/Paris'
                   AND s.starts_at<=(now() AT TIME ZONE 'Europe/Paris')+interval '30 minutes'
             ), devices AS (
                 SELECT DISTINCT ON (a.slot_id,a.connection_key) a.* FROM attendance_event a JOIN slots s ON s.id=a.slot_id

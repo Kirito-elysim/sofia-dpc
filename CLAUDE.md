@@ -10,7 +10,11 @@ suivi temps réel, relances SMS/mail, journal d'audit). La phase 2 (logs Zoom, d
 analytique) ne doit PAS être développée : seulement visible dans le menu avec un badge « Bientôt ».
 
 ## Règles métier clés
-- Une session = **une seule classe virtuelle** avec plusieurs **créneaux** (matin 09:00–13:00, après-midi 14:00–17:00),
+- Une **session** est une période (début, fin) d'un organisme. Chaque formation qu'on y rattache forme une
+  **session-formation** : les PS s'y inscrivent, elle porte la capacité, les numéros de session par financement et les
+  dates d'accès (héritées de la session sauf exception). Voir `docs/proposition-sessions.md`.
+- Une session-formation a 0 à n classes virtuelles, **toutes à suivre** ; une même classe virtuelle peut réunir plusieurs
+  session-formations. Une classe a plusieurs **créneaux** (matin 09:00–13:00, après-midi 14:00–17:00),
   un **formateur par créneau**. Les PS sont comptés **une fois** par classe.
 - Présence tracée **par créneau / demi-journée** (exigence ANDPC).
 - 3 comptes Zoom ; un compte = une seule réunion à la fois. Allocation automatique d'un compte libre par créneau ;
@@ -34,7 +38,7 @@ analytique) ne doit PAS être développée : seulement visible dans le menu avec
 ## Conventions
 - Code et noms techniques en anglais ; textes de l'interface en **français**.
   Exception validée : l'entité de formation s'appelle `Formation` (table `formation`, API `/api/formations`), pas `Training`.
-- Entités principales : Organization, Formation, TimeSlot, Trainer, ZoomAccount, User, VirtualClass, ClassSlot,
+- Entités principales : Organization, Formation, Session, SessionFormation, TimeSlot, Trainer, ZoomAccount, User, VirtualClass, ClassSlot,
   Participant (PS), Enrollment, AttendanceEvent, MessageTemplate, MessageLog, AuditLog.
 - Statuts de classe (liste fermée) : PLANNED « Planifiée », IN_PROGRESS « En cours », DONE « Terminée », CANCELLED « Annulée ».
 - Aucune suppression définitive : toute entité étend `SoftDeletable` (colonne `deleted_at`) et une suppression
