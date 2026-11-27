@@ -1,11 +1,9 @@
 .ts-head,.ts-controls,.ts-tabs,.ts-section-head,.ts-metrics {display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ts-controls {margin-left:auto}.ts button svg,.ts-tabs svg {width:17px;height:17px}.ts button:disabled {opacity:.5}
-.ts .ts-cover {width:100px;height:70px;display:grid;place-items:center;background:#e9eff5;color:#7388a1;border-radius:10px;position:relative;overflow:hidden;cursor:pointer}
-.ts-cover input {position:absolute;inset:0;opacity:0;cursor:pointer}.ts-cover img {width:100%;height:100%;object-fit:cover}.ts-cover>svg:first-child{width:35px;height:35px}.ts-pencil{position:absolute;bottom:4px;right:4px;width:24px;height:24px;background:white;border-radius:50%;padding:5px}
-.ts-head .tw-tags {margin-top:6px}.ts-head .tw-tags span:first-child {background:#e6f6ec}
-.ts-tabs {gap:0;background:#fff;border:1px solid #d7dfeb;border-radius:9px;overflow:hidden}.ts-tabs button {flex:1;border:0;border-radius:0;border-bottom:2px solid transparent;padding:13px}.ts-tabs button[aria-pressed=true] {color:var(--accent);background:#fff0f5;border-bottom-color:var(--accent)}
+.ts-head>.ts-icon {box-sizing:content-box;flex:none;width:30px;height:30px;padding:12px;border-radius:12px;background:#e4edfc;color:var(--accent)}
+.ts-head .tw-tags {margin-top:6px}.ts-tabs {gap:0;background:#fff;border:1px solid #d7dfeb;border-radius:9px;overflow:hidden}.ts-tabs button {flex:1;border:0;border-radius:0;border-bottom:2px solid transparent;padding:13px}.ts-tabs button[aria-pressed=true] {color:var(--accent);background:#f0f7ff;border-bottom-color:var(--accent)}
 .ts-metrics>div {display:flex;align-items:center;gap:10px;padding:14px;background:white;border:1px solid #dbe2ed;border-radius:10px;flex:1 1 140px}
-.ts-metrics svg {color:#8251db;background:#f1eaff;padding:7px;border-radius:9px;width:34px;height:34px}
+.ts-metrics svg {color:var(--accent);background:#e8f1ff;padding:7px;border-radius:9px;width:34px;height:34px}
 .ts-body {border:0;padding:0;margin:0;min-width:0;display:grid;gap:16px}.ts-section-head {justify-content:space-between;margin-bottom:12px}.ts-section-head h2 {margin:0}
 .ts-scroll {overflow:auto}.ts table {border-collapse:collapse;width:100%}.ts td,.ts th {text-align:left;padding:10px;border-bottom:1px solid #e6eaf2}.ts th {background:#f2f5f9}
 .ts-score {display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}.ts-score>div {border:1px solid #dbe2ed;border-radius:8px;padding:10px}.ts-score strong {display:block;font-size:24px}.ts-score small {text-align:left}

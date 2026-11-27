@@ -131,8 +131,6 @@ class Formation extends SoftDeletable
         #[ORM\Column(nullable: true), Groups(['read', 'write']), Assert\Positive] public ?int $totalDurationMin = null,
         // Default seat count copied onto each new class (20 today, variable per formation).
         #[ORM\Column, Groups(['read', 'write']), Assert\Positive] public int $defaultCapacity = 20,
-        #[ORM\Column(options: ['default' => true]), Groups(['read', 'write'])] public bool $active = true,
-        #[ORM\Column(length: 100, nullable: true), Groups(['read', 'write']), Assert\Length(max: 100)] public ?string $theme = null,
     ) {
         $this->additionalOrganizations = new \Doctrine\Common\Collections\ArrayCollection();
     }
@@ -200,6 +198,13 @@ class Formation extends SoftDeletable
         if ('' !== $prefix && '' !== $own) {
             $this->reference = mb_substr($prefix.'-'.$own, 0, 300);
         }
+    }
+
+    /** Only a published formation can receive classes: there is no separate switch. */
+    #[Groups('read')]
+    public function isActive(): bool
+    {
+        return 'published' === $this->publicationStatus;
     }
 
     #[Groups('read')]

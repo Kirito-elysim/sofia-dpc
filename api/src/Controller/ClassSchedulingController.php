@@ -28,7 +28,7 @@ final class ClassSchedulingController extends AbstractController
         $formation = $em->find(Formation::class, $this->positiveId($input['formationId'] ?? null));
         $day = is_string($input['date'] ?? null) ? $input['date'] : '';
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $day, new \DateTimeZone('Europe/Paris'));
-        if (!$date || $date->format('Y-m-d') !== $day || !$formation?->active || !$formation->organization->active || $formation->getDeletedAt() || $formation->organization->getDeletedAt()) {
+        if (!$date || $date->format('Y-m-d') !== $day || !$formation?->isActive() || !$formation->organization->active || $formation->getDeletedAt() || $formation->organization->getDeletedAt()) {
             throw new UnprocessableEntityHttpException('Date ou formation invalide.');
         }
         $class = new VirtualClass($formation, $date, $this->positiveId($input['capacity'] ?? 20));
@@ -58,7 +58,7 @@ final class ClassSchedulingController extends AbstractController
             }
             // Hold the formation until the session commits, including when deletion is requested concurrently.
             $em->refresh($formation, \Doctrine\DBAL\LockMode::PESSIMISTIC_READ);
-            if (!$formation->active || $formation->getDeletedAt()) {
+            if (!$formation->isActive() || $formation->getDeletedAt()) {
                 throw new UnprocessableEntityHttpException('Cette formation ne peut plus accueillir de session.');
             }
             // All schedulers acquire host locks in the same order. Under READ COMMITTED

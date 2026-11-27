@@ -66,8 +66,8 @@ type ActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>,'type'|'classNam
 export function EditAction({label='Modifier',...props}:ActionProps&{label?:string}) {
   return <button type="button" className="ls-action edit" {...props}><Pencil aria-hidden="true"/>{label}</button>
 }
-export function ToggleAction({active,...props}:ActionProps&{active:boolean}) {
-  return <button type="button" className={'ls-action toggle '+(active?'off':'on')} {...props}><ActivationActionIcon active={active}/>{active?'Désactiver':'Activer'}</button>
+export function ToggleAction({active,labels=['Désactiver','Activer'],...props}:ActionProps&{active:boolean;labels?:[string,string]}) {
+  return <button type="button" className={'ls-action toggle '+(active?'off':'on')} {...props}><ActivationActionIcon active={active}/>{labels[active?0:1]}</button>
 }
 export function DeleteAction(props:ActionProps) {
   return <button type="button" className="ls-action delete" {...props}><Trash2 aria-hidden="true"/>Supprimer</button>

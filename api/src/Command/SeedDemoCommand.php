@@ -32,6 +32,9 @@ class SeedDemoCommand extends Command
             new Formation($sofia, 'Antibiothérapie en ville', 'DEMO-001'),
             new Formation($phocea, 'Prise en charge du diabète de type 2', 'DEMO-002'),
         ];
+        foreach ($formations as $formation) {
+            $formation->publicationStatus = 'published';
+        }
         foreach ([$sofia, $phocea, ...$formations] as $o) {
             $this->em->persist($o);
         }

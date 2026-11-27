@@ -45,3 +45,18 @@ test('modifie les lignes de financement d’une formation publiée',async()=>{
   fireEvent.click(view.getByRole('button',{name:'Enregistrer'}))
   await waitFor(()=>expect(api).toHaveBeenCalledWith('/formations/8',expect.objectContaining({method:'PATCH',body:JSON.stringify({fifplCodes:[{organization:4,year:2026,code:'F-1',priceHT:'300'}]})})))
 })
+
+test('saisit la durée en heures et retire les financements d’un organisme enlevé',async()=>{
+  const sofia={id:4,name:'SOFIA',active:true},studio={id:5,name:'Studio',active:true}
+  const record={id:8,title:'Publiée',organization:sofia,additionalOrganizations:[studio],publicationStatus:'published',active:true,defaultCapacity:20,totalDurationMin:470,fundingTypes:['FIFPL'],andpcCodes:[],fifplCodes:[{organization:4,year:2026,code:'F-1'},{organization:5,year:2026,code:'F-2'}],personalPrices:[]}
+  vi.mocked(api).mockClear()
+  vi.mocked(api).mockImplementation(async(path,init)=>path==='/organizations'?[sofia,studio]:path==='/target-audiences'?[]:init?.method==='PATCH'?{...record,...JSON.parse(String(init.body)),organization:sofia,additionalOrganizations:[]}:record)
+  const view=render(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/settings/formations/8/edit']}><Routes><Route path="/settings/formations/:id/edit" element={<FormationSheet canReadClasses={false} canSchedule={false}/>}/></Routes></MemoryRouter></QueryClientProvider>)
+  expect((await view.findByLabelText('Heures') as HTMLInputElement).value).toBe('7')
+  fireEvent.change(view.getByLabelText('Heures'),{target:{value:'8'}})
+  fireEvent.click(await view.findByRole('button',{name:'Retirer Studio'}))
+  fireEvent.click(view.getByRole('button',{name:'Enregistrer'}))
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/formations/8',expect.objectContaining({method:'PATCH'})))
+  const [,request]=vi.mocked(api).mock.calls.find(([,init])=>init?.method==='PATCH')!
+  expect(JSON.parse(String(request?.body))).toEqual({totalDurationMin:530,additionalOrganizations:[],andpcCodes:[],fifplCodes:[{organization:4,year:2026,code:'F-1'}],personalPrices:[]})
+})

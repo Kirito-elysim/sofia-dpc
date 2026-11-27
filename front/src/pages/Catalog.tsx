@@ -1,4 +1,4 @@
-import {Picto,type PictoName} from '../components/Picto'
+import {Picto} from '../components/Picto'
 import {ActivationActionIcon} from '../components/ActivationIcons'
 import {ActiveBadge,DataTable,DeleteAction,DeletedBadge,EditAction,EmptyState,Filters,IconAction,ListPage,OrgBadges,PageHeader,RowActions,SearchField,SelectField,ToggleAction} from '../components/list/List'
 import {useDeleted} from '../components/list/useDeleted'
@@ -12,12 +12,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import './organizations.css'
 import './catalog.css'
 import {publicationLabel, publicationOptions} from './formationPublication'
+import {durationLabel} from './formationFormat'
 import {Archive, BookOpen, EyeOff, FileCheck2, FilePenLine} from 'lucide-react'
 
 type Row = Parameters<typeof fromRow>[1] & {id:number}
 type Account = {userId:number;superAdmin:boolean;trainerId:number;staff:boolean;active:boolean}
 type Org = {id:number;name:string;code?:string;color?:string|null}
-const topics:Record<string,PictoName>={'Métabolisme':'heart','Cardiologie':'activity','Infectiologie':'pill'}
 const fundingOptions = ['ANDPC', 'FIFPL', 'Personnel']
 type AndpcCode = {year:number;code:string}
 function codes(row:Row):AndpcCode[]{return ((row.andpcCodes ?? []) as Partial<AndpcCode>[]).filter((c):c is AndpcCode=>!!c.code)}
@@ -43,7 +43,8 @@ export default function Catalog({path,title,canWrite}:{path:string,title:string,
   const mutation=useMutation({mutationFn:({id,method,body}:{id:number,method:string,body?:object})=>api('/'+path+'/'+id,{method,body:JSON.stringify(body),headers:method==='PATCH'?{'Content-Type':'application/merge-patch+json'}:{}}),onSuccess:()=>{remove(null);void qc.invalidateQueries()}})
   function open(row:Row|'new'){navigate('/settings/'+path+'/'+(row==='new'?'new':row.id+'/edit'))}
   function close(){if(!mutation.isPending){remove(null);mutation.reset()}}
-  function toggle(r:Row){mutation.mutate({id:r.id,method:'PATCH',body:{active:!r.active}})}
+  // A formation has a single state: « active » means published. Drafts are finished in the steps, archives in the sheet.
+  function toggle(r:Row){mutation.mutate({id:r.id,method:'PATCH',body:trainer?{active:!r.active}:{publicationStatus:r.publicationStatus==='published'?'unpublished':'published'}})}
   const reset=()=>{setOrg('');setFunding('');setStatus('');search('')}
   const name=(r:Row)=>trainer?[r.civility,r.lastName,r.firstName].filter(Boolean).join(' '):String(r.title)
   const sessions=new Map<number,number>();for(const c of classes.data??[])sessions.set(c.formation.id,(sessions.get(c.formation.id)??0)+1)
@@ -55,7 +56,7 @@ export default function Catalog({path,title,canWrite}:{path:string,title:string,
   const text=(value:unknown)=>String(value??'')
   const columns:Column<Row>[]=[
     {key:'name',label:trainer?'Nom et prénom':'Formation',sort:name,render:r=>trainer?<strong>{name(r)}</strong>:<div className="formation-name">
-      {r.thumbnail ? <img className="formation-thumbnail" src={r.thumbnail} alt="" loading="lazy"/> : <Picto name={topics[String(r.theme)]??'book'}/>}
+      {r.thumbnail ? <img className="formation-thumbnail" src={r.thumbnail} alt="" loading="lazy"/> : <Picto name="book"/>}
       <div><strong>{name(r)}</strong>{r.reference&&<small>Réf. : {r.reference}</small>}</div></div>},
     {key:'organization',label:'Organisme',sort:r=>memberships(r).map(o=>o.name).join(', '),render:r=><OrgBadges organizations={coloured(r)}/>},
     ...(trainer?[
@@ -67,16 +68,16 @@ export default function Catalog({path,title,canWrite}:{path:string,title:string,
       {key:'funding',label:'Financement',sort:(r:Row)=>(r.fundingTypes??[]).join(),render:(r:Row)=>r.fundingTypes?.length?<div className="formation-funds">{r.fundingTypes.map((f:string)=><span key={f} data-fund={f}>{f}</span>)}</div>:'—'},
       {key:'audience',label:'Public',sort:(r:Row)=>text(r.audience),render:(r:Row)=>r.audience?<span className="formation-audience"><UserRound/>{r.audience}</span>:'—'},
       {key:'codes',label:'Codes ANDPC',sort:(r:Row)=>codes(r)[0]?.code??'',render:(r:Row)=><span title={codes(r).map(c=>c.year+' · '+c.code).join(', ')}>{codes(r)[0]?.code??'—'}{codes(r).length>1&&' +'+(codes(r).length-1)}</span>},
-      {key:'totalDurationMin',label:'Durée',sort:(r:Row)=>Number(r.totalDurationMin??0),render:(r:Row)=>r.totalDurationMin?Number(r.totalDurationMin)/60+' h':'—'},
+      {key:'totalDurationMin',label:'Durée',sort:(r:Row)=>Number(r.totalDurationMin??0),render:(r:Row)=>durationLabel(Number(r.totalDurationMin??0))||'—'},
       {key:'sessions',label:'Sessions',sort:(r:Row)=>sessions.get(r.id)??0,render:(r:Row)=>classes.data?<span className="formation-sessions"><CalendarDays/>{sessions.get(r.id)??0}</span>:'—'},
     ]),
-    {key:'active',label:'Statut',sort:r=>trainer?String(r.active):publicationLabel(r.publicationStatus),render:r=>deleted.viewing?<DeletedBadge at={r.deletedAt as string}/>:trainer?<ActiveBadge active={!!r.active}/>:<div className="formation-status"><span data-publication={r.publicationStatus}>{publicationLabel(r.publicationStatus)}</span>{!r.active&&<ActiveBadge active={false}/>}</div>},
+    {key:'active',label:'Statut',sort:r=>trainer?String(r.active):publicationLabel(r.publicationStatus),render:r=>deleted.viewing?<DeletedBadge at={r.deletedAt as string}/>:trainer?<ActiveBadge active={!!r.active}/>:<div className="formation-status"><span data-publication={r.publicationStatus}>{publicationLabel(r.publicationStatus)}</span></div>},
   ]
   const actions=(r:Row)=>{
     const account=accounts.data?.find(x=>x.trainerId===r.id),ok=!!account&&!account.superAdmin&&account.active&&(account.staff||!!r.active)
     return <RowActions>
       <EditAction label={!trainer&&r.publicationStatus==='draft'?'Reprendre':'Modifier'} aria-label={(!trainer&&r.publicationStatus==='draft'?'Reprendre ':'Modifier ')+name(r)} onClick={()=>open(r)}/>
-      <ToggleAction active={!!r.active} disabled={mutation.isPending} onClick={()=>toggle(r)}/>
+      {(trainer||['published','unpublished'].includes(String(r.publicationStatus)))&&<ToggleAction active={!!r.active} labels={trainer?undefined:['Dépublier','Publier']} disabled={mutation.isPending} onClick={()=>toggle(r)}/>}
       <DeleteAction disabled={!trainer&&sessions.has(r.id)} title={!trainer&&sessions.has(r.id)?'Suppression impossible : cette formation possède déjà une session.':undefined} aria-label={'Supprimer '+name(r)} onClick={()=>{mutation.reset();remove(r)}}/>
       {superAdmin&&<IconAction icon={LogIn} disabled={!ok||borrow.isPending} onClick={()=>borrow.mutate(account!.userId)} aria-label={'Se connecter en tant que '+name(r)} title={ok?'Se connecter en tant que':account?.superAdmin?'Impossible pour un super admin':'Aucun accès actif'}/>}
     </RowActions>

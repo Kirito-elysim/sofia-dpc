@@ -220,7 +220,7 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $formation = $this->call('POST', '/api/formations', ['title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['publicationStatus' => 'published', 'title' => 'Test Zoom', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Test', 'lastName' => 'Zoom', 'email' => 'trainer@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $slots = [];
         foreach ([['Matin', '09:00', '13:00'], ['Après-midi', '14:00', '17:00']] as [$label, $startTime, $endTime]) {
@@ -267,7 +267,7 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $formation = $this->call('POST', '/api/formations', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['publicationStatus' => 'published', 'title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
@@ -333,7 +333,7 @@ class ReferentialsTest extends WebTestCase
         $this->em()->getConnection()->executeStatement('TRUNCATE zoom_account CASCADE');
         $this->loginAs('SUPER_ADMIN');
         $org = $this->org();
-        $formation = $this->call('POST', '/api/formations', ['title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
+        $formation = $this->call('POST', '/api/formations', ['publicationStatus' => 'published', 'title' => 'Atelier', 'organization' => "/api/organizations/$org"])['id'];
         $trainer = $this->call('POST', '/api/trainers', ['firstName' => 'Ana', 'lastName' => 'Test', 'email' => 'ana@example.test', 'organizations' => ["/api/organizations/$org"]])['id'];
         $time = $this->call('POST', '/api/time-slots', ['label' => 'Matin', 'startTime' => '09:00', 'endTime' => '13:00'])['id'];
         $host = $this->call('POST', '/api/zoom-accounts', ['label' => 'Compte test', 'profile' => 'DEMO', 'hostUserId' => 'test'])['id'];
@@ -777,8 +777,11 @@ class ReferentialsTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertSame('Médecins généralistes', $this->call('GET', '/api/formations/'.$formation['id'])['audience']);
         $url = '/api/formations/'.$formation['id'];
-        $hidden = $this->call('PATCH', $url, ['publicationStatus' => 'unpublished', 'active' => false]);
+        // « active » is derived from the publication status and cannot be forced.
+        $hidden = $this->call('PATCH', $url, ['publicationStatus' => 'unpublished', 'active' => true]);
         $this->assertSame(['unpublished', false], [$hidden['publicationStatus'], $hidden['active']]);
+        $shown = $this->call('PATCH', $url, ['publicationStatus' => 'published']);
+        $this->assertTrue($shown['active']);
         $this->call('PATCH', $url, ['andpcCodes' => [['organization' => 999999, 'year' => 2026, 'code' => 'X']]]);
         $this->assertResponseStatusCodeSame(422);
         $codes = [['organization' => $org, 'year' => 2026, 'code' => 'A-1'], ['organization' => $other, 'year' => 2026, 'code' => 'B-2']];
